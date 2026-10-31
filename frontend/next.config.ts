@@ -15,9 +15,6 @@ function resolveBackendUrl(): string {
 const backendUrl = resolveBackendUrl();
 
 const nextConfig: NextConfig = {
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   async rewrites() {
     return [
       {
