@@ -23,6 +23,11 @@ async def connect_to_mongo():
     # Always ensure in-memory store is seeded
     await seed_initial_data(db_manager.resilient_db)
 
+    if not settings.MONGODB_URI or not settings.MONGODB_URI.strip() or not settings.MONGODB_URI.startswith(("mongodb://", "mongodb+srv://")):
+        db_manager.is_connected = False
+        logger.info("No valid MONGODB_URI provided. Server running with resilient in-memory MongoDB store.")
+        return
+
     try:
         logger.info(f"Connecting to MongoDB at: {settings.MONGODB_URI.split('@')[-1] if '@' in settings.MONGODB_URI else settings.MONGODB_URI}")
         db_manager.client = AsyncIOMotorClient(
