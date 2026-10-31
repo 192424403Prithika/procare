@@ -27,6 +27,8 @@ export interface ContractorRecord {
   updated_at: string;
 }
 
+export type ContractorProfile = ContractorRecord;
+
 export interface RegisterContractorInput {
   company_name: string;
   contact_person: string;
@@ -156,7 +158,7 @@ export async function fetchContractors(filter?: {
 
       const { data, error } = await query;
       if (!error && data) {
-        list = data.map((item) => ({
+        list = data.map((item: any) => ({
           id: item.id,
           user_id: item.user_id,
           company_name: item.company_name,

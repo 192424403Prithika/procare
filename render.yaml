@@ -1,0 +1,68 @@
+services:
+  # ============================================================================
+  # 1. FastAPI Python Backend Service
+  # ============================================================================
+  - type: web
+    name: propcare-backend
+    env: python
+    region: oregon
+    plan: free
+    rootDir: backend
+    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    startCommand: uvicorn app.main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: false
+      - key: MONGODB_URI
+        sync: false # Set this in Render Dashboard to your MongoDB Atlas connection string
+      - key: MONGODB_DATABASE
+        value: propcare_nw
+      - key: JWT_SECRET_KEY
+        generateValue: true
+      - key: JWT_ALGORITHM
+        value: HS256
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: 1440
+      - key: STORAGE_PROVIDER
+        value: local
+      - key: STORAGE_LOCAL_DIR
+        value: ./uploads
+      - key: STORAGE_SIGNING_SECRET
+        generateValue: true
+      - key: YOLO_MODEL_PATH
+        value: backend/models/moisture_best.pt
+      - key: BREAKAGE_YOLO_MODEL_PATH
+        value: backend/models/breakage_best.pt
+      - key: YOLO_DEVICE
+        value: cpu
+      - key: BREAKAGE_YOLO_DEVICE
+        value: cpu
+      - key: CORS_ORIGINS
+        value: "http://localhost:3000,http://127.0.0.1:3000"
+
+  # ============================================================================
+  # 2. Next.js Frontend Web Application
+  # ============================================================================
+  - type: web
+    name: propcare-frontend
+    env: node
+    region: oregon
+    plan: free
+    rootDir: frontend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    autoDeploy: true
+    envVars:
+      - key: NODE_VERSION
+        value: 20.18.0
+      - key: NEXT_PUBLIC_API_URL
+        fromService:
+          type: web
+          name: propcare-backend
+          property: host

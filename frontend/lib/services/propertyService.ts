@@ -4,14 +4,12 @@ import { apiClient } from "@/lib/apiClient";
 
 
 export interface PropertyRecord {
-
   id: string;
-
   property_name: string;
-
+  title?: string;
   address: string;
-
   postal_code: string;
+  postcode?: string;
 
   latitude: number | null;
 

@@ -16,6 +16,7 @@ export interface InspectionImageItem {
 
 export interface InspectionReport {
   id: string;
+  title?: string;
   property_id: string;
   property_name: string;
   property_address: string;
@@ -25,6 +26,9 @@ export interface InspectionReport {
   inspector_email?: string;
   inspection_zone: string;
   room_name: string;
+  room?: string;
+  inspection_date?: string;
+  date?: string;
   floor: string;
   inspection_location: string;
   status: "Pending Review" | "Requires Review" | "Completed" | "Approved" | "Flagged for Contractor";

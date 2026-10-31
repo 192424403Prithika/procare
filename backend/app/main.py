@@ -61,6 +61,7 @@ origins = list(set(settings.CORS_ORIGINS + [settings.FRONTEND_URL, "http://local
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
+    allow_origin_regex=r"^https://.*\.onrender\.com$",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -115,6 +116,7 @@ async def root():
     }
 
 @app.get("/health")
+@app.get("/api/v1/health")
 async def health_check():
     db_health = await check_db_health()
     return {
