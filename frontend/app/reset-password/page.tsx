@@ -1,8 +1,8 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, Suspense } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import {
   BuildingShieldIcon,
   ArrowRightIcon,
@@ -11,11 +11,12 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from "@/components/Icons";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { apiClient } from "@/lib/apiClient";
 
-export default function ResetPasswordPage() {
+function ResetPasswordForm() {
   const router = useRouter();
-  const supabase = createClient();
+  const searchParams = useSearchParams();
+  const token = searchParams.get("token") || "";
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,26 +42,19 @@ export default function ResetPasswordPage() {
 
     setIsLoading(true);
 
-    if (isSupabaseConfigured()) {
-      const { error } = await supabase.auth.updateUser({ password });
-      setIsLoading(false);
-      if (error) {
-        setErrorMsg(error.message);
-      } else {
-        setSuccessMsg("Password updated successfully! Redirecting to login...");
-        setTimeout(() => {
-          router.push("/login?reset=success");
-        }, 1500);
-      }
-    } else {
-      // Offline / Unconfigured fallback
+    try {
+      await apiClient.post("/api/v1/auth/reset-password", {
+        token: token || "manual_reset_token",
+        new_password: password,
+      });
+
+      setSuccessMsg("Password updated successfully! Redirecting to login...");
       setTimeout(() => {
-        setIsLoading(false);
-        setSuccessMsg("Password updated successfully (Local Demo Mode). Redirecting...");
-        setTimeout(() => {
-          router.push("/login?reset=success");
-        }, 1200);
-      }, 700);
+        router.push("/login?reset=success");
+      }, 1200);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Password update request failed. Please request a new recovery link.");
+      setIsLoading(false);
     }
   };
 
@@ -184,5 +178,22 @@ export default function ResetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ResetPasswordPage() {
+  return (
+    <Suspense
+      fallback={
+        <div className="min-h-screen bg-[#EFE4EC] flex items-center justify-center">
+          <div className="flex items-center gap-2 text-xs font-semibold text-[#79566F]">
+            <span className="w-4 h-4 border-2 border-[#79566F] border-t-transparent rounded-full animate-spin" />
+            <span>Loading password reset...</span>
+          </div>
+        </div>
+      }
+    >
+      <ResetPasswordForm />
+    </Suspense>
   );
 }

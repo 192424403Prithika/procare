@@ -1,0 +1,32 @@
+# PropCare NW - YOLO Structural Breakage & Property Damage Detection Dataset Configuration
+# Standard Ultralytics YOLOv8 Data Specification
+
+path: C:/Users/Patan Afrin/Downloads/Prithi files/Propcare/propacare-/backend/training/breakage/dataset
+train: images/train
+val: images/val
+test: images/val
+
+# Defect class count
+nc: 12
+
+# Defect class names aligned with PropCare NW taxonomy
+names:
+  0: wall_crack
+  1: ceiling_crack
+  2: structural_fracture
+  3: broken_plaster
+  4: broken_tiles
+  5: concrete_spalling
+  6: exposed_rebar
+  7: damaged_wall_surface
+  8: broken_masonry
+  9: damaged_ceiling
+  10: surface_holes_impact
+  11: damaged_door_window_frame
+
+# Metadata
+metadata:
+  framework: "Ultralytics YOLOv8"
+  primary_source: "Building Defects Dataset (Roboflow Universe, CC BY 4.0)"
+  purpose: "Automated identification of building structural defects, masonry cracks, and surface fractures"
+  note: "Trained on real optical imagery of building defects. Optical detection alone does not determine structural integrity."

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   FileTextIcon,
@@ -10,51 +10,109 @@ import {
   ShieldCheckIcon,
   DropletIcon,
   AcousticIcon,
+  SparklesIcon,
+  RefreshCwIcon,
   XIcon,
 } from "@/components/Icons";
+import { apiClient } from "@/lib/apiClient";
+import { fetchInspections, InspectionReport } from "@/lib/services/inspectionService";
+import { fetchProperties, PropertyRecord } from "@/lib/services/propertyService";
+
+interface GeneratedReportRecord {
+  id: string;
+  property_id: string;
+  property_name: string;
+  inspection_id?: string;
+  report_type: string;
+  title: string;
+  file_path: string;
+  download_url: string;
+  file_size_bytes: number;
+  generated_by: string;
+  generated_at: string;
+}
 
 export default function ReportsPage() {
-  const [selectedReport, setSelectedReport] = useState<string | null>(null);
-  const [downloadSuccess, setDownloadSuccess] = useState(false);
+  const [reports, setReports] = useState<GeneratedReportRecord[]>([]);
+  const [inspections, setInspections] = useState<InspectionReport[]>([]);
+  const [properties, setProperties] = useState<PropertyRecord[]>([]);
 
-  const reportPacks = [
-    {
-      id: "REP-2026-EX-01",
-      title: "Quarterly Executive Property Intelligence Pack",
-      target: "Housing Trust Board & Regulators",
-      coverage: "148 Properties &bull; Greater Manchester Portfolio",
-      date: "2026-10-30",
-      type: "Executive Summary",
-      size: "2.4 MB PDF",
-      summary: "Macro-level risk distribution, percentage of stock with dew-point vulnerability, and total work order expenditures.",
-    },
-    {
-      id: "REP-2026-TECH-42",
-      title: "Multi-Modal Forensic Evidence Dossier",
-      target: "Surveyors, Claims Assessors & Structural Engineers",
-      coverage: "Trinity Court (Unit 14) & Pendleton Tower (Floor 4)",
-      date: "2026-10-29",
-      type: "Technical Dossier",
-      size: "8.1 MB PDF",
-      summary: "Raw OpenCV specular difference heatmaps, 44.1kHz FFT acoustic spectrum plots, and Open-Meteo psychrometric saturation curves.",
-    },
-    {
-      id: "REP-2026-SLA-09",
-      title: "Awaab's Law Statutory Compliance Audit Trail",
-      target: "Housing Ombudsman & Local Authority Environmental Health",
-      coverage: "All 24-Hour & 14-Day Mandatory Notice Timestamps",
-      date: "2026-10-28",
-      type: "Legal Compliance",
-      size: "1.8 MB PDF",
-      summary: "Cryptographically verifiable timestamped audit trail proving 24h hazard response and contractor assignment within statutory windows.",
-    },
-  ];
+  const [selectedInspectionId, setSelectedInspectionId] = useState<string>("");
+  const [selectedPropertyId, setSelectedPropertyId] = useState<string>("");
+  const [reportType, setReportType] = useState<string>("Court-Admissible Forensic Dossier");
 
-  const handleDownload = (repId: string) => {
-    setDownloadSuccess(true);
-    setTimeout(() => {
-      setDownloadSuccess(false);
-    }, 2000);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const [previewTitle, setPreviewTitle] = useState<string>("");
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+
+  const loadAll = async () => {
+    setIsLoading(true);
+    try {
+      const [reps, insps, props] = await Promise.all([
+        apiClient.get<GeneratedReportRecord[]>("/api/v1/reports"),
+        fetchInspections(),
+        fetchProperties(),
+      ]);
+      setReports(reps || []);
+      setInspections(insps || []);
+      setProperties(props || []);
+
+      if (insps && insps.length > 0) {
+        setSelectedInspectionId(insps[0].id);
+        setSelectedPropertyId(insps[0].property_id);
+      } else if (props && props.length > 0) {
+        setSelectedPropertyId(props[0].id);
+      }
+    } catch (err) {
+      console.warn("Failed to load reports initial data:", err);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadAll();
+  }, []);
+
+  const handleInspectionChange = (inspId: string) => {
+    setSelectedInspectionId(inspId);
+    const found = inspections.find((i) => i.id === inspId);
+    if (found) {
+      setSelectedPropertyId(found.property_id);
+    }
+  };
+
+  const handleGenerateReport = async () => {
+    if (!selectedPropertyId) {
+      setErrorMessage("Please select a property or inspection.");
+      return;
+    }
+
+    setIsGenerating(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
+
+    try {
+      const newReport = await apiClient.post<GeneratedReportRecord>("/api/v1/reports/generate", {
+        property_id: selectedPropertyId,
+        inspection_id: selectedInspectionId || undefined,
+        report_type: reportType,
+      });
+
+      setReports((prev) => [newReport, ...prev]);
+      setSuccessMessage(`Report generated successfully: ${newReport.title}`);
+      if (newReport.download_url) {
+        setPreviewUrl(newReport.download_url);
+        setPreviewTitle(newReport.title);
+      }
+    } catch (err: any) {
+      setErrorMessage(err?.message || "Failed to generate report. Please try again.");
+    } finally {
+      setIsGenerating(false);
+    }
   };
 
   return (
@@ -70,143 +128,217 @@ export default function ReportsPage() {
             <span>Documentation &amp; Compliance</span>
           </div>
           <h1 className="text-2xl font-extrabold text-[#493344] tracking-tight">
-            Forensic Reports &amp; Legal Audit Packs
+            Automated Inspection Reports &amp; Legal Audit Packs
           </h1>
           <p className="text-xs text-[#806C7B]">
-            Court-admissible technical dossiers, Housing Ombudsman compliance packs, and board-level risk summaries
+            ReportLab court-admissible technical dossiers, OpenCV telemetry attachments, and Housing Ombudsman compliance packs
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          {downloadSuccess && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#EFF8F3] text-[#4A8B71] text-xs font-bold border border-[#4A8B71]/30 animate-in fade-in">
-              <CheckCircleIcon size={14} />
-              <span>Report Package Downloaded</span>
-            </span>
-          )}
+        <button
+          onClick={loadAll}
+          className="inline-flex items-center gap-2 px-3 py-2 bg-white border border-[#E6D5DC] rounded-xl text-xs font-semibold text-[#493344] hover:bg-[#EFE4EC] shadow-xs cursor-pointer"
+        >
+          <RefreshCwIcon size={14} className={isLoading ? "animate-spin" : ""} />
+          Refresh History
+        </button>
+      </div>
+
+      {/* Statutory Disclaimer */}
+      <div className="p-3.5 rounded-xl bg-[#EFF8F3] border border-[#4A8B71]/30 text-xs text-[#285A44] flex items-start gap-2.5">
+        <SparklesIcon size={16} className="text-[#4A8B71] shrink-0 mt-0.5" />
+        <div>
+          <span className="font-bold">Evidence Integrity: </span>
+          All reports embed actual database records, calibrated OpenCV optical difference calculations, SciPy acoustic FFT frequencies, and Open-Meteo psychrometric telemetry. Fabricated or static mock metrics are strictly prohibited.
         </div>
       </div>
 
-      {/* Reports Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {reportPacks.map((pack) => (
-          <div
-            key={pack.id}
-            className="bg-white p-6 rounded-3xl border border-[#E6D5DC] shadow-xs hover:border-[#79566F]/40 transition-all flex flex-col justify-between"
-          >
-            <div>
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-mono text-[#79566F] font-bold">{pack.id}</span>
-                <span className="px-2 py-0.5 rounded-md bg-[#EFE4EC] text-[#79566F] text-[10px] font-bold">
-                  {pack.type}
-                </span>
-              </div>
-
-              <h3 className="text-base font-bold text-[#493344] mt-2.5 leading-snug">
-                {pack.title}
-              </h3>
-              <p className="text-xs text-[#806C7B] mt-1" dangerouslySetInnerHTML={{ __html: pack.coverage }} />
-
-              <div className="mt-4 p-3 bg-[#F7EDE5] rounded-2xl text-xs text-[#806C7B] leading-relaxed">
-                {pack.summary}
-              </div>
-
-              <div className="mt-4 space-y-1 text-[11px] text-[#806C7B]">
-                <div>Audience: <strong className="text-[#493344]">{pack.target}</strong></div>
-                <div>Generated: <span className="font-mono">{pack.date}</span> &bull; {pack.size}</div>
-              </div>
-            </div>
-
-            <div className="mt-6 pt-4 border-t border-[#E6D5DC] flex items-center justify-between gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedReport(pack.id)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl border border-[#E6D5DC] text-[#493344] text-xs font-semibold hover:bg-[#F7EDE5] transition-colors cursor-pointer"
-              >
-                <EyeIcon size={14} />
-                <span>Preview</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleDownload(pack.id)}
-                className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#79566F] hover:bg-[#67475E] text-white text-xs font-semibold shadow-xs transition-colors cursor-pointer"
-              >
-                <DownloadIcon size={14} />
-                <span>Export PDF</span>
-              </button>
-            </div>
+      {/* Report Generator Action Card */}
+      <div className="p-6 rounded-2xl bg-white border border-[#E6D5DC] shadow-xs space-y-4">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-[#EFE4EC] text-[#79566F] flex items-center justify-center">
+            <FileTextIcon size={20} />
           </div>
-        ))}
+          <div>
+            <h2 className="text-sm font-bold text-[#493344]">Generate New Official Inspection Dossier</h2>
+            <p className="text-xs text-[#806C7B]">
+              Compile multi-modal telemetry into a cryptographically timestamped PDF document
+            </p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+          <div>
+            <label className="block text-xs font-bold text-[#493344] mb-1">Select Inspection</label>
+            <select
+              value={selectedInspectionId}
+              onChange={(e) => handleInspectionChange(e.target.value)}
+              className="w-full text-xs px-3 py-2 rounded-xl border border-[#E6D5DC] bg-white text-[#493344] focus:outline-none focus:border-[#79566F]"
+            >
+              {inspections.map((i) => (
+                <option key={i.id} value={i.id}>
+                  {i.property_name} ({i.inspection_date}) - {i.room}
+                </option>
+              ))}
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-[#493344] mb-1">Dossier Legal Archetype</label>
+            <select
+              value={reportType}
+              onChange={(e) => setReportType(e.target.value)}
+              className="w-full text-xs px-3 py-2 rounded-xl border border-[#E6D5DC] bg-white text-[#493344] focus:outline-none focus:border-[#79566F]"
+            >
+              <option value="Court-Admissible Forensic Dossier">Court-Admissible Forensic Dossier</option>
+              <option value="Awaab's Law Section 10A Compliance Pack">Awaab's Law Section 10A Compliance Pack</option>
+              <option value="Housing Ombudsman Technical Summary">Housing Ombudsman Technical Summary</option>
+              <option value="Quarterly Executive Asset Review">Quarterly Executive Asset Review</option>
+            </select>
+          </div>
+
+          <div className="flex items-end">
+            <button
+              onClick={handleGenerateReport}
+              disabled={isGenerating}
+              className="w-full inline-flex items-center justify-center gap-2 px-4 py-2 bg-[#79566F] hover:bg-[#63445A] text-white text-xs font-bold rounded-xl shadow-xs disabled:opacity-60 cursor-pointer"
+            >
+              <RefreshCwIcon size={14} className={isGenerating ? "animate-spin" : ""} />
+              {isGenerating ? "Compiling ReportLab PDF..." : "Generate Official PDF"}
+            </button>
+          </div>
+        </div>
+
+        {successMessage && (
+          <div className="p-3 rounded-xl bg-[#EFF8F3] border border-[#4A8B71]/30 text-xs text-[#4A8B71] font-semibold">
+            {successMessage}
+          </div>
+        )}
+
+        {errorMessage && (
+          <div className="p-3 rounded-xl bg-[#FDF2F4] border border-[#C84661]/30 text-xs text-[#C84661] font-semibold">
+            {errorMessage}
+          </div>
+        )}
       </div>
 
-      {/* PDF Document Preview Modal */}
-      {selectedReport && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-[#E6D5DC] animate-in fade-in zoom-in-95 max-h-[85vh] overflow-y-auto">
-            <div className="flex items-center justify-between pb-3 border-b border-[#E6D5DC]">
-              <div>
-                <h3 className="text-base font-bold text-[#493344]">Document Preview</h3>
-                <p className="text-xs text-[#806C7B]">Audit ID: {selectedReport}</p>
+      {/* Previously Generated Reports Table */}
+      <div className="bg-white rounded-2xl border border-[#E6D5DC] shadow-xs overflow-hidden">
+        <div className="px-5 py-3 border-b border-[#E6D5DC] flex items-center justify-between">
+          <h2 className="text-sm font-bold text-[#493344]">Previously Generated Forensic Dossiers</h2>
+          <span className="text-xs text-[#806C7B]">{reports.length} records</span>
+        </div>
+
+        {isLoading ? (
+          <div className="p-12 text-center text-xs text-[#806C7B]">
+            <div className="w-8 h-8 border-2 border-[#79566F] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+            Loading generated report metadata...
+          </div>
+        ) : reports.length === 0 ? (
+          <div className="p-12 text-center text-xs text-[#806C7B]">
+            No forensic reports generated yet. Use the tool above to generate the first official dossier.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-xs">
+              <thead className="bg-[#F7EDE5]/60 text-[#806C7B] font-semibold text-[10px] uppercase">
+                <tr>
+                  <th className="px-5 py-3">Report Title</th>
+                  <th className="px-4 py-3">Property</th>
+                  <th className="px-4 py-3">Generated By</th>
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">File Size</th>
+                  <th className="px-4 py-3 text-right">Actions</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#E6D5DC]">
+                {reports.map((rep) => (
+                  <tr key={rep.id} className="hover:bg-[#F7EDE5]/20 transition-colors">
+                    <td className="px-5 py-3 font-bold text-[#493344]">
+                      <div className="flex items-center gap-2">
+                        <FileTextIcon size={14} className="text-[#79566F] shrink-0" />
+                        <span>{rep.title}</span>
+                      </div>
+                    </td>
+                    <td className="px-4 py-3 text-[#493344] font-medium">{rep.property_name}</td>
+                    <td className="px-4 py-3 text-[#806C7B]">{rep.generated_by}</td>
+                    <td className="px-4 py-3 text-[#806C7B]">
+                      {rep.generated_at ? new Date(rep.generated_at).toLocaleDateString() : "Recent"}
+                    </td>
+                    <td className="px-4 py-3 text-[#806C7B]">
+                      {rep.file_size_bytes > 0
+                        ? `${(rep.file_size_bytes / 1024).toFixed(1)} KB`
+                        : "PDF"}
+                    </td>
+                    <td className="px-4 py-3 text-right">
+                      <div className="flex items-center justify-end gap-2">
+                        {rep.download_url && (
+                          <>
+                            <button
+                              onClick={() => {
+                                setPreviewUrl(rep.download_url);
+                                setPreviewTitle(rep.title);
+                              }}
+                              className="p-1.5 rounded-lg border border-[#E6D5DC] hover:bg-[#EFE4EC] text-[#79566F]"
+                              title="Preview"
+                            >
+                              <EyeIcon size={14} />
+                            </button>
+                            <a
+                              href={rep.download_url}
+                              download
+                              target="_blank"
+                              rel="noreferrer"
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#79566F] hover:bg-[#63445A] text-white text-[11px] font-bold shadow-xs"
+                            >
+                              <DownloadIcon size={12} />
+                              <span>Download</span>
+                            </a>
+                          </>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Live PDF Preview Modal */}
+      {previewUrl && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-xs p-4">
+          <div className="w-full max-w-4xl h-[85vh] bg-white rounded-2xl border border-[#E6D5DC] shadow-2xl flex flex-col overflow-hidden animate-in zoom-in-95 duration-150">
+            <div className="px-6 py-4 border-b border-[#E6D5DC] flex items-center justify-between bg-[#F7EDE5]/40">
+              <div className="flex items-center gap-2">
+                <FileTextIcon size={16} className="text-[#79566F]" />
+                <h3 className="text-sm font-bold text-[#493344]">{previewTitle || "Dossier Preview"}</h3>
               </div>
-              <button
-                type="button"
-                onClick={() => setSelectedReport(null)}
-                className="p-1.5 text-[#806C7B] hover:text-[#493344] rounded-lg cursor-pointer"
-              >
-                <XIcon size={20} />
-              </button>
+              <div className="flex items-center gap-3">
+                <a
+                  href={previewUrl}
+                  download
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#79566F] text-white text-xs font-bold"
+                >
+                  <DownloadIcon size={12} />
+                  <span>Download PDF</span>
+                </a>
+                <button
+                  onClick={() => setPreviewUrl(null)}
+                  className="text-[#806C7B] hover:text-[#493344] p-1"
+                >
+                  <XIcon size={18} />
+                </button>
+              </div>
             </div>
 
-            {/* Simulated PDF Layout */}
-            <div className="mt-4 p-6 bg-slate-100 rounded-2xl border border-slate-200 text-[#493344] font-serif space-y-4">
-              <div className="border-b border-slate-300 pb-3 flex justify-between items-baseline font-sans">
-                <div>
-                  <h4 className="text-base font-black text-[#493344] tracking-tight">
-                    PROPCARE NW &bull; PREDICTIVE PROPERTY INTELLIGENCE
-                  </h4>
-                  <div className="text-[10px] text-slate-500 uppercase tracking-widest">
-                    Statutory Forensic Assessment &bull; ISO 17025 Compliant
-                  </div>
-                </div>
-                <div className="text-right text-[10px] text-slate-500 font-mono">
-                  CLASSIFICATION: OFFICIAL
-                </div>
-              </div>
-
-              <div className="text-xs space-y-2">
-                <p className="font-bold font-sans text-sm">
-                  Executive Findings: Trinity Court (Salford M3 5LE)
-                </p>
-                <p className="text-[11px] text-slate-700 leading-relaxed font-sans">
-                  On 2026-10-28, multi-modal diagnostics conducted across Unit 14 bathroom wall and cavity envelope revealed a 78% specular moisture anomaly corroborating a 1.24 kHz acoustic resonance characteristic of a pressurized copper pipe leak.
-                </p>
-                <p className="text-[11px] text-slate-700 leading-relaxed font-sans">
-                  Pursuant to Awaab&apos;s Law (Social Housing Regulation Act 2023), emergency remediation work order WO-8821 was issued within 4.2 hours of detection, well within the statutory 24-hour investigation threshold.
-                </p>
-              </div>
-
-              <div className="p-3 bg-white rounded-xl border border-slate-300 text-[10px] font-sans flex justify-between">
-                <span>Verified Sign-off Officer: <strong>Eleanor Vance</strong></span>
-                <span>Cryptographic Digest: <code className="text-[#79566F]">e8f3...a91c</code></span>
-              </div>
-            </div>
-
-            <div className="mt-4 pt-3 border-t border-[#E6D5DC] flex justify-end gap-2">
-              <button
-                type="button"
-                onClick={() => setSelectedReport(null)}
-                className="px-4 py-2 rounded-xl border border-[#E6D5DC] text-xs font-semibold text-[#806C7B] hover:bg-[#F7EDE5] cursor-pointer"
-              >
-                Close Preview
-              </button>
-              <Link
-                href="/app/inspections/INSP-2026-0914/report"
-                className="px-4 py-2 rounded-xl bg-[#79566F] hover:bg-[#67475E] text-white text-xs font-semibold cursor-pointer inline-flex items-center gap-1.5"
-              >
-                <FileTextIcon size={14} />
-                <span>Open Live Printable Dossier</span>
-              </Link>
+            <div className="flex-1 bg-slate-100">
+              <iframe
+                src={previewUrl}
+                title="PDF Preview"
+                className="w-full h-full border-none"
+              />
             </div>
           </div>
         </div>

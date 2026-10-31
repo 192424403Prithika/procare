@@ -11,13 +11,11 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from "@/components/Icons";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { UserRole } from "@/components/app/RoleContext";
+import { apiClient } from "@/lib/apiClient";
 
 export default function SignUpPage() {
   const router = useRouter();
-  const supabase = createClient();
-  const isConnected = isSupabaseConfigured();
 
   const [fullName, setFullName] = useState("");
   const [orgName, setOrgName] = useState("");
@@ -69,52 +67,35 @@ export default function SignUpPage() {
 
     setIsLoading(true);
 
-    if (isConnected) {
-      // Real Supabase Auth SignUp
-      const { data, error } = await supabase.auth.signUp({
-        email,
+    // Register with FastAPI + MongoDB Atlas Backend
+    try {
+      const regResp = await apiClient.post("/api/v1/auth/register", {
+        email: email.trim().toLowerCase(),
         password,
-        options: {
-          data: {
-            full_name: fullName,
-            organization: orgName,
-            role: role,
-          },
-        },
+        full_name: fullName.trim(),
+        organization: orgName.trim(),
       });
 
-      setIsLoading(false);
-
-      if (error) {
-        setErrorMsg(error.message);
-      } else {
-        localStorage.setItem("propcare_role", role);
-        localStorage.setItem("propcare_user_email", email);
-
-        if (data.session) {
-          // Direct login (email auto-confirm enabled)
-          setSuccessMsg("Account created and authorized! Redirecting to dashboard...");
-          setTimeout(() => {
-            router.push(`/app/dashboard?role=${role}`);
-          }, 800);
-        } else {
-          // Confirmation email sent
-          setSuccessMsg(
-            "Account registered! A verification link has been dispatched to your email address. Please check your inbox to activate your account."
-          );
-        }
-      }
-    } else {
-      // Local fallback mode
-      setTimeout(() => {
-        setIsLoading(false);
-        localStorage.setItem("propcare_role", role);
-        localStorage.setItem("propcare_user_email", email);
-        setSuccessMsg("Account created successfully (Local Demo Mode). Initializing dashboard...");
+      if (regResp && regResp.access_token) {
+        apiClient.setTokens(regResp.access_token, regResp.refresh_token);
+        const assignedRole = regResp.user?.role || role || "manager";
+        document.cookie = `propcare_role=${assignedRole}; path=/; max-age=604800; SameSite=Lax`;
+        setSuccessMsg("Account created and authorized! Redirecting to dashboard...");
         setTimeout(() => {
-          router.push(`/app/dashboard?role=${role}`);
-        }, 800);
-      }, 700);
+          router.push(`/app/dashboard?role=${assignedRole}`);
+        }, 600);
+        return;
+      } else {
+        setErrorMsg("Failed to initialize account. Please try again.");
+        setIsLoading(false);
+      }
+    } catch (apiErr: any) {
+      if (apiErr?.status === 409) {
+        setErrorMsg("An account with this email address already exists. Please log in.");
+      } else {
+        setErrorMsg(apiErr?.message || "Registration failed. Please check network connection.");
+      }
+      setIsLoading(false);
     }
   };
 
@@ -145,15 +126,6 @@ export default function SignUpPage() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-lg">
         <div className="bg-white py-8 px-6 shadow-xl rounded-3xl border border-[#E6D5DC] sm:px-10">
-          {!isConnected && (
-            <div className="mb-5 p-3 rounded-2xl bg-[#EFE4EC] border border-[#79566F]/20 text-[11px] text-[#493344] flex items-start gap-2">
-              <span className="w-2 h-2 rounded-full bg-[#B995AD] shrink-0 mt-1 animate-pulse" />
-              <div>
-                <strong className="text-[#79566F]">Local Mode Active:</strong> You can test signup immediately. To link with real Supabase Auth, add your project credentials to <code className="text-[#79566F] font-mono">.env.local</code>.
-              </div>
-            </div>
-          )}
-
           {errorMsg && (
             <div className="mb-4 p-3 rounded-2xl bg-[#FDF2F4] border border-[#C84661]/30 text-xs text-[#C84661] flex items-start gap-2">
               <AlertTriangleIcon size={16} className="shrink-0 mt-0.5" />
@@ -214,66 +186,69 @@ export default function SignUpPage() {
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Full Name & Organization */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
-                <label htmlFor="fullName" className="block text-xs font-bold text-[#493344]">
-                  Full Name
+                <label htmlFor="full-name" className="block text-xs font-bold text-[#493344]">
+                  Full Legal Name
                 </label>
                 <div className="mt-1">
                   <input
-                    id="fullName"
+                    id="full-name"
                     name="fullName"
                     type="text"
                     required
-                    placeholder="e.g. Rachel Sterling"
+                    placeholder="Jane Doe"
                     value={fullName}
                     onChange={(e) => setFullName(e.target.value)}
-                    className="appearance-none block w-full px-3.5 py-2.5 border border-[#E6D5DC] rounded-xl shadow-xs placeholder-[#806C7B]/50 focus:outline-none focus:ring-2 focus:ring-[#79566F] focus:border-[#79566F] text-sm text-[#493344]"
+                    className="appearance-none block w-full px-3 py-2 border border-[#E6D5DC] rounded-xl shadow-xs text-sm text-[#493344] bg-[#F7EDE5]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#79566F]"
                   />
                 </div>
               </div>
-
               <div>
-                <label htmlFor="orgName" className="block text-xs font-bold text-[#493344]">
-                  Housing Provider / Company
+                <label htmlFor="org-name" className="block text-xs font-bold text-[#493344]">
+                  Housing Organization
                 </label>
                 <div className="mt-1">
                   <input
-                    id="orgName"
+                    id="org-name"
                     name="orgName"
                     type="text"
                     required
-                    placeholder="e.g. Manchester Homes Ltd"
+                    placeholder="Salford Housing Trust"
                     value={orgName}
                     onChange={(e) => setOrgName(e.target.value)}
-                    className="appearance-none block w-full px-3.5 py-2.5 border border-[#E6D5DC] rounded-xl shadow-xs placeholder-[#806C7B]/50 focus:outline-none focus:ring-2 focus:ring-[#79566F] focus:border-[#79566F] text-sm text-[#493344]"
+                    className="appearance-none block w-full px-3 py-2 border border-[#E6D5DC] rounded-xl shadow-xs text-sm text-[#493344] bg-[#F7EDE5]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#79566F]"
                   />
                 </div>
               </div>
             </div>
 
+            {/* Email Address */}
             <div>
               <label htmlFor="email" className="block text-xs font-bold text-[#493344]">
-                Official Work Email
+                Official Email Address
               </label>
               <div className="mt-1">
                 <input
                   id="email"
                   name="email"
                   type="email"
+                  autoComplete="email"
                   required
-                  placeholder="name@provider.co.uk"
+                  placeholder="name@organization.gov.uk"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3.5 py-2.5 border border-[#E6D5DC] rounded-xl shadow-xs placeholder-[#806C7B]/50 focus:outline-none focus:ring-2 focus:ring-[#79566F] focus:border-[#79566F] text-sm text-[#493344]"
+                  className="appearance-none block w-full px-3.5 py-2.5 border border-[#E6D5DC] rounded-xl shadow-xs text-sm text-[#493344] bg-[#F7EDE5]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#79566F]"
                 />
               </div>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            {/* Passwords */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <div>
                 <label htmlFor="password" className="block text-xs font-bold text-[#493344]">
-                  Password (min 8 chars)
+                  Password
                 </label>
                 <div className="mt-1 relative">
                   <input
@@ -281,74 +256,73 @@ export default function SignUpPage() {
                     name="password"
                     type={showPassword ? "text" : "password"}
                     required
-                    minLength={8}
                     placeholder="••••••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
-                    className="appearance-none block w-full px-3.5 py-2.5 pr-10 border border-[#E6D5DC] rounded-xl shadow-xs placeholder-[#806C7B]/50 focus:outline-none focus:ring-2 focus:ring-[#79566F] focus:border-[#79566F] text-sm text-[#493344]"
+                    className="appearance-none block w-full px-3 py-2 pr-9 border border-[#E6D5DC] rounded-xl shadow-xs text-sm text-[#493344] bg-[#F7EDE5]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#79566F]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#806C7B] hover:text-[#493344] cursor-pointer"
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-[#806C7B]"
                   >
-                    {showPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                    {showPassword ? <EyeOffIcon size={14} /> : <EyeIcon size={14} />}
                   </button>
                 </div>
               </div>
 
               <div>
-                <label htmlFor="confirmPassword" className="block text-xs font-bold text-[#493344]">
+                <label htmlFor="confirm-password" className="block text-xs font-bold text-[#493344]">
                   Confirm Password
                 </label>
                 <div className="mt-1 relative">
                   <input
-                    id="confirmPassword"
+                    id="confirm-password"
                     name="confirmPassword"
                     type={showConfirmPassword ? "text" : "password"}
                     required
-                    minLength={8}
                     placeholder="••••••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
-                    className="appearance-none block w-full px-3.5 py-2.5 pr-10 border border-[#E6D5DC] rounded-xl shadow-xs placeholder-[#806C7B]/50 focus:outline-none focus:ring-2 focus:ring-[#79566F] focus:border-[#79566F] text-sm text-[#493344]"
+                    className="appearance-none block w-full px-3 py-2 pr-9 border border-[#E6D5DC] rounded-xl shadow-xs text-sm text-[#493344] bg-[#F7EDE5]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#79566F]"
                   />
                   <button
                     type="button"
                     onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                    className="absolute inset-y-0 right-0 pr-3 flex items-center text-[#806C7B] hover:text-[#493344] cursor-pointer"
+                    className="absolute inset-y-0 right-0 pr-2.5 flex items-center text-[#806C7B]"
                   >
-                    {showConfirmPassword ? <EyeOffIcon size={16} /> : <EyeIcon size={16} />}
+                    {showConfirmPassword ? <EyeOffIcon size={14} /> : <EyeIcon size={14} />}
                   </button>
                 </div>
               </div>
             </div>
 
-            <div className="pt-2">
-              <label className="flex items-start gap-2 cursor-pointer">
+            {/* Terms Agreement */}
+            <div className="pt-1">
+              <label className="flex items-start gap-2.5 text-xs text-[#806C7B] cursor-pointer">
                 <input
                   type="checkbox"
-                  required
                   checked={agreed}
                   onChange={(e) => setAgreed(e.target.checked)}
-                  className="mt-0.5 h-4 w-4 text-[#79566F] focus:ring-[#79566F] border-[#E6D5DC] rounded cursor-pointer"
+                  className="mt-0.5 h-4 w-4 rounded border-[#E6D5DC] text-[#79566F] focus:ring-[#79566F]"
                 />
-                <span className="text-xs text-[#806C7B]">
-                  I agree to the PropCare NW Terms of Service, Data Processing Addendum, and statutory Awaab&apos;s Law audit standards.
+                <span>
+                  I agree to PropCare NW <span className="text-[#79566F] font-semibold">Terms of Service</span> and statutory protocols under <span className="text-[#79566F] font-semibold">Awaab&apos;s Law</span>.
                 </span>
               </label>
             </div>
 
+            {/* Submit Button */}
             <div className="pt-2">
               <button
                 type="submit"
                 disabled={isLoading}
-                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-[#79566F] hover:bg-[#67475E] active:bg-[#4336D0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#79566F] transition-all cursor-pointer"
+                className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-[#79566F] hover:bg-[#67475E] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#79566F] transition-all cursor-pointer disabled:opacity-60"
               >
                 {isLoading ? (
                   <span className="flex items-center gap-2">
                     <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                    <span>Creating Profile in Supabase...</span>
+                    <span>Creating Enterprise Seat...</span>
                   </span>
                 ) : (
                   <>
@@ -373,7 +347,7 @@ export default function SignUpPage() {
         {/* Security badge */}
         <div className="mt-6 text-center text-[11px] text-[#806C7B] flex items-center justify-center gap-1.5">
           <CheckCircleIcon size={14} className="text-[#4A8B71]" />
-          <span>Encrypted with TLS 1.3 &amp; Supabase RLS Policies</span>
+          <span>Encrypted with TLS 1.3 &amp; Argon2 Password Hashing</span>
         </div>
       </div>
     </div>

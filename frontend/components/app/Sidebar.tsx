@@ -61,6 +61,20 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
       badge: "OpenCV",
     },
     {
+      label: "Moisture AI (YOLO)",
+      href: "/app/analysis/moisture",
+      icon: SparklesIcon,
+      badge: "YOLOv8",
+      badgeColor: "bg-[#79566F] text-white",
+    },
+    {
+      label: "Breakage AI (YOLO)",
+      href: "/app/analysis/breakage",
+      icon: SparklesIcon,
+      badge: "YOLOv8",
+      badgeColor: "bg-amber-600 text-white",
+    },
+    {
       label: "Acoustic Analysis",
       href: "/app/acoustic-analysis",
       icon: AcousticIcon,
@@ -72,6 +86,37 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
       icon: SparklesIcon,
       badge: "Cross-Modal",
       badgeColor: "bg-[#79566F] text-white",
+    },
+    {
+      label: "Damage Comparison",
+      href: "/app/comparison",
+      icon: SparklesIcon,
+      badge: "SIFT",
+    },
+    {
+      label: "Maintenance Forecast",
+      href: "/app/forecasting",
+      icon: ClockIcon,
+      badge: "Weibull",
+    },
+    {
+      label: "Cost Estimator",
+      href: "/app/cost-estimator",
+      icon: WrenchIcon,
+      badge: "RICS",
+    },
+    {
+      label: "AI Recommendation Assistant",
+      href: "/app/assistant",
+      icon: SparklesIcon,
+      badge: "Actionable",
+      badgeColor: "bg-[#4A8B71] text-white",
+    },
+    {
+      label: "QR Inspector Scan",
+      href: "/app/scan",
+      icon: BuildingIcon,
+      badge: "QR",
     },
     {
       label: "Weather Intelligence",
@@ -100,6 +145,12 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
       badge: null,
     },
     {
+      label: "Contractor Analytics",
+      href: "/app/contractors/analytics",
+      icon: UsersIcon,
+      badge: "SLA Audit",
+    },
+    {
       label: "Work Orders",
       href: "/app/work-orders",
       icon: WrenchIcon,
@@ -109,7 +160,7 @@ export default function Sidebar({ mobileOpen, setMobileOpen }: SidebarProps) {
       label: "Reports",
       href: "/app/reports",
       icon: FileTextIcon,
-      badge: null,
+      badge: "PDF",
     },
     {
       label: "Notifications",

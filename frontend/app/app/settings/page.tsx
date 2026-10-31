@@ -43,7 +43,7 @@ export default function SettingsPage() {
             System &amp; Analytical Settings
           </h1>
           <p className="text-xs text-[#806C7B]">
-            Configure multi-modal analytical pipelines, Awaab&apos;s Law SLA triggers, and Supabase integration
+            Configure multi-modal analytical pipelines, Awaab&apos;s Law SLA triggers, and MongoDB Atlas integration
           </p>
         </div>
 
@@ -173,7 +173,7 @@ export default function SettingsPage() {
                 Backend Infrastructure &amp; Security Isolation
               </h2>
               <p className="text-xs text-[#806C7B]">
-                Supabase PostgreSQL with Row-Level Security (RLS) &bull; FastAPI analytical cluster
+                MongoDB Atlas Document Database &bull; FastAPI analytical cluster
               </p>
             </div>
           </div>
@@ -181,8 +181,8 @@ export default function SettingsPage() {
           <div className="space-y-3 text-xs">
             <div className="p-3 bg-[#F7EDE5] rounded-2xl flex items-center justify-between">
               <div>
-                <span className="font-bold text-[#493344] block">Supabase Row-Level Security (RLS)</span>
-                <span className="text-[11px] text-[#806C7B]">Enforced via JWT bearer tokens and role claims</span>
+                <span className="font-bold text-[#493344] block">MongoDB Atlas Security &amp; RBAC</span>
+                <span className="text-[11px] text-[#806C7B]">Enforced via Argon2 hashing and JWT claims</span>
               </div>
               <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EFF8F3] text-[#4A8B71] border border-[#4A8B71]/30">
                 Active &amp; Guarded

@@ -27,6 +27,14 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
     allowedRoles: ["admin", "manager", "inspector"],
   },
   {
+    path: "/app/analysis/moisture",
+    allowedRoles: ["admin", "manager", "inspector"],
+  },
+  {
+    path: "/app/analysis/breakage",
+    allowedRoles: ["admin", "manager", "inspector", "contractor"],
+  },
+  {
     path: "/app/acoustic-analysis",
     allowedRoles: ["admin", "manager", "inspector"],
   },
@@ -56,6 +64,30 @@ export const ROUTE_PERMISSIONS: RoutePermission[] = [
   },
   {
     path: "/app/reports",
+    allowedRoles: ["admin", "manager", "inspector"],
+  },
+  {
+    path: "/app/forecasting",
+    allowedRoles: ["admin", "manager", "inspector"],
+  },
+  {
+    path: "/app/comparison",
+    allowedRoles: ["admin", "manager", "inspector"],
+  },
+  {
+    path: "/app/cost-estimator",
+    allowedRoles: ["admin", "manager"],
+  },
+  {
+    path: "/app/contractors/analytics",
+    allowedRoles: ["admin", "manager", "contractor"],
+  },
+  {
+    path: "/app/scan",
+    allowedRoles: ["admin", "manager", "inspector"],
+  },
+  {
+    path: "/app/assistant",
     allowedRoles: ["admin", "manager"],
   },
   {

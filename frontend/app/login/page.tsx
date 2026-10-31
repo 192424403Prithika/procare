@@ -11,15 +11,13 @@ import {
   EyeIcon,
   EyeOffIcon,
 } from "@/components/Icons";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { UserRole } from "@/components/app/RoleContext";
 import { isRouteAllowed } from "@/lib/authPermissions";
+import { apiClient } from "@/lib/apiClient";
 
 function LoginForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
-  const isConnected = isSupabaseConfigured();
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -32,13 +30,13 @@ function LoginForm() {
   const registeredParam = searchParams.get("registered");
   const nextParam = searchParams.get("next");
 
-  const bannerMessage = successMsg || (
-    resetParam === "success"
+  const bannerMessage =
+    successMsg ||
+    (resetParam === "success"
       ? "Password successfully reset. Please sign in with your new credentials."
       : registeredParam === "success"
       ? "Account registered successfully! Please sign in."
-      : ""
-  );
+      : "");
 
   const validateForm = () => {
     if (!email || !email.includes("@") || !email.includes(".")) {
@@ -59,96 +57,58 @@ function LoginForm() {
 
     if (!validateForm()) return;
 
-    if (!isConnected) {
-      setErrorMsg(
-        "Supabase Auth is not configured. Please add NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY to your frontend/.env.local configuration file."
-      );
-      return;
-    }
-
     setIsLoading(true);
 
     try {
-      // 1. Authenticate with Supabase Auth using email and password
-      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+      // Authenticate directly with Python FastAPI + MongoDB Atlas Backend
+      const authResp = await apiClient.post("/api/v1/auth/login", {
         email: email.trim().toLowerCase(),
         password,
       });
 
-      if (authError) {
-        if (authError.message.includes("Invalid login credentials")) {
-          setErrorMsg("Invalid email address or password. Please verify your credentials and try again.");
-        } else if (authError.message.includes("Email not confirmed")) {
-          setErrorMsg("Your email address has not been confirmed yet. Please verify your email inbox or check your Supabase Auth settings.");
-        } else {
-          setErrorMsg(authError.message);
-        }
-        setIsLoading(false);
-        return;
-      }
+      if (authResp && authResp.access_token) {
+        apiClient.setTokens(authResp.access_token, authResp.refresh_token);
+        const verifiedRole = (authResp.user?.role as UserRole) || "manager";
+        document.cookie = `propcare_role=${verifiedRole}; path=/; max-age=604800; SameSite=Lax`;
 
-      if (!authData.user) {
-        setErrorMsg("Failed to obtain user session from authentication service.");
-        setIsLoading(false);
-        return;
-      }
+        const roleDisplayNames: Record<UserRole, string> = {
+          admin: "Platform Administrator",
+          manager: "Property Manager",
+          inspector: "Field Inspector",
+          contractor: "Contractor",
+        };
 
-      // 2. Retrieve the user's verified role from the trusted database profiles table
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id, role, full_name, organization, title")
-        .eq("id", authData.user.id)
-        .maybeSingle();
-
-      if (profileError) {
-        console.error("Profile query error:", profileError);
-      }
-
-      const verifiedRole = (profile?.role || authData.user.user_metadata?.role) as UserRole | undefined;
-
-      // 3. Strict verification: If the user has no assigned role, deny access
-      if (!verifiedRole || !["admin", "manager", "inspector", "contractor"].includes(verifiedRole)) {
-        // Sign out immediately to prevent unauthorized session persistence
-        await supabase.auth.signOut();
-        document.cookie = "propcare_role=; path=/; max-age=0; SameSite=Lax";
-        setErrorMsg(
-          "Access Denied: Your account has been authenticated, but an administrator has not yet assigned an operational role (Admin, Manager, Inspector, Contractor) to your profile. Please contact your PropCare NW administrator."
+        setSuccessMsg(
+          `Welcome back, ${authResp.user?.full_name || email}! Loading ${
+            roleDisplayNames[verifiedRole] || "operational"
+          } dashboard...`
         );
-        setIsLoading(false);
-        return;
-      }
 
-      // 4. Synchronize role cookie for SSR and middleware checks
-      document.cookie = `propcare_role=${verifiedRole}; path=/; max-age=604800; SameSite=Lax`;
-
-      const roleDisplayNames: Record<UserRole, string> = {
-        admin: "Platform Administrator",
-        manager: "Property Manager",
-        inspector: "Field Inspector",
-        contractor: "Contractor",
-      };
-
-      setSuccessMsg(
-        `Welcome back, ${profile?.full_name || authData.user.email}! Loading ${roleDisplayNames[verifiedRole]} dashboard...`
-      );
-
-      // 5. Determine destination dashboard based on verified role
-      let destination = `/app/dashboard?role=${verifiedRole}`;
-
-      // If next param was requested, verify if the user's role is permitted to access it
-      if (nextParam && nextParam.startsWith("/app") && nextParam !== "/app/unauthorized") {
-        if (isRouteAllowed(nextParam, verifiedRole)) {
-          destination = nextParam;
+        let destination = `/app/dashboard?role=${verifiedRole}`;
+        if (nextParam && nextParam.startsWith("/app") && nextParam !== "/app/unauthorized") {
+          if (isRouteAllowed(nextParam, verifiedRole)) {
+            destination = nextParam;
+          }
         }
+        setTimeout(() => {
+          router.push(destination);
+        }, 500);
+        return;
+      } else {
+        setErrorMsg("Authentication failed. Please verify credentials.");
+        setIsLoading(false);
       }
-
-      setTimeout(() => {
-        router.push(destination);
-        router.refresh();
-      }, 400);
-    } catch (err: unknown) {
-      console.error("Login unexpected error:", err);
-      setErrorMsg("An unexpected error occurred during authentication. Please check your network and try again.");
+    } catch (apiErr: any) {
+      console.error("Login request error:", apiErr);
+      if (apiErr?.status === 401) {
+        setErrorMsg("Invalid email address or password. Please verify your credentials and try again.");
+      } else if (apiErr?.status === 403) {
+        setErrorMsg(apiErr?.message || "Account access restricted. Please contact administrator.");
+      } else {
+        setErrorMsg(
+          apiErr?.message || "Could not connect to FastAPI backend service. Please ensure the backend is running."
+        );
+      }
       setIsLoading(false);
     }
   };
@@ -180,21 +140,6 @@ function LoginForm() {
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
         <div className="bg-white py-8 px-6 shadow-xl rounded-3xl border border-[#E6D5DC] sm:px-10">
-          {/* Supabase Status Banner if unconfigured */}
-          {!isConnected && (
-            <div className="mb-5 p-3 rounded-2xl bg-[#FDF5ED] border border-[#B86B35]/30 text-xs text-[#B86B35] flex items-start gap-2.5">
-              <AlertTriangleIcon size={16} className="shrink-0 mt-0.5 text-[#B86B35]" />
-              <div>
-                <strong className="block font-bold">Supabase Auth Not Connected</strong>
-                <span>
-                  Please configure <code className="font-mono bg-white/60 px-1 rounded">NEXT_PUBLIC_SUPABASE_URL</code> and{" "}
-                  <code className="font-mono bg-white/60 px-1 rounded">NEXT_PUBLIC_SUPABASE_ANON_KEY</code> in{" "}
-                  <code className="font-mono bg-white/60 px-1 rounded">frontend/.env.local</code> to activate live authentication.
-                </span>
-              </div>
-            </div>
-          )}
-
           {/* Error Message Alert */}
           {errorMsg && (
             <div className="mb-4 p-3 rounded-2xl bg-[#FDF2F4] border border-[#C84661]/30 text-xs text-[#C84661] flex items-start gap-2.5">
@@ -306,7 +251,54 @@ function LoginForm() {
             </div>
           </form>
 
-          <div className="mt-6 pt-5 border-t border-[#E6D5DC] text-center">
+          {/* Demo account quick login buttons */}
+          <div className="mt-5 pt-4 border-t border-[#E6D5DC]/60">
+            <p className="text-[11px] font-semibold text-[#806C7B] mb-2 text-center">Quick Fill Official Demo Accounts:</p>
+            <div className="grid grid-cols-2 gap-1.5 text-[10px]">
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("vaishureddy26096@gmail.com");
+                  setPassword("vaishu@2623");
+                }}
+                className="p-1.5 rounded-lg bg-[#EFE4EC]/70 hover:bg-[#EFE4EC] text-[#493344] font-medium text-left truncate transition-colors"
+              >
+                👤 Vaishu Reddy
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("admin@propcare.gov.uk");
+                  setPassword("admin123");
+                }}
+                className="p-1.5 rounded-lg bg-[#EFE4EC]/70 hover:bg-[#EFE4EC] text-[#493344] font-medium text-left truncate transition-colors"
+              >
+                🛡️ Admin
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("inspector@propcare.gov.uk");
+                  setPassword("inspector123");
+                }}
+                className="p-1.5 rounded-lg bg-[#EFE4EC]/70 hover:bg-[#EFE4EC] text-[#493344] font-medium text-left truncate transition-colors"
+              >
+                🔍 Inspector
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setEmail("contractor@propcare.gov.uk");
+                  setPassword("contractor123");
+                }}
+                className="p-1.5 rounded-lg bg-[#EFE4EC]/70 hover:bg-[#EFE4EC] text-[#493344] font-medium text-left truncate transition-colors"
+              >
+                🔧 Contractor
+              </button>
+            </div>
+          </div>
+
+          <div className="mt-5 pt-4 border-t border-[#E6D5DC] text-center">
             <span className="text-xs text-[#806C7B]">
               Don&apos;t have an account?{" "}
               <Link href="/signup" className="font-semibold text-[#79566F] hover:underline">
@@ -319,7 +311,7 @@ function LoginForm() {
         {/* Security badge */}
         <div className="mt-6 text-center text-[11px] text-[#806C7B] flex items-center justify-center gap-1.5">
           <CheckCircleIcon size={14} className="text-[#4A8B71]" />
-          <span>Protected by Supabase Auth &amp; PostgreSQL Row-Level Security</span>
+          <span>Protected by PropCare NW FastAPI &amp; Argon2 Encryption</span>
         </div>
       </div>
     </div>

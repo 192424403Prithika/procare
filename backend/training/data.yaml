@@ -1,0 +1,18 @@
+# PropCare NW — Moisture & Water Damage YOLOv8 Dataset Specification
+# Formatted according to Ultralytics YOLO dataset conventions.
+
+path: C:/Users/Patan Afrin/Downloads/Prithi files/Propcare/propacare-/backend/training/datasets/moisture_dataset
+train: images/train              # Train images
+val: images/val                  # Validation images
+test: images/test                # Test images (optional)
+
+# Defect Classes (8 Classes)
+names:
+  0: water_stain            # Discoloration or moisture rings on dry surface
+  1: damp_patch             # Active capillary or hygroscopic surface dampness
+  2: wall_moisture_damage   # Structural plaster/drywall deterioration from wall moisture
+  3: ceiling_water_damage   # Water staining/bulging on ceiling boards
+  4: peeling_paint          # Paint blistering, delamination, or flaking from moisture
+  5: visible_mould          # Stachybotrys, Aspergillus, or Cladosporium mould growth
+  6: leakage_mark           # Flow trails or direct pipe/penetration drip stains
+  7: plaster_deterioration  # Efflorescence, spalling, or crumbling mineral substrate

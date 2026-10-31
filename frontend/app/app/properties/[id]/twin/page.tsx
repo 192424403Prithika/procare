@@ -22,6 +22,8 @@ import { fetchPropertyById, PropertyRecord } from "@/lib/services/propertyServic
 import {
   fetchBuildingZonesByPropertyId,
   BuildingZoneRecord,
+  fetchZoneAnnotations,
+  addZoneAnnotation,
 } from "@/lib/services/buildingZoneService";
 
 export default function PropertyDigitalTwinPage() {
@@ -30,20 +32,27 @@ export default function PropertyDigitalTwinPage() {
 
   const [property, setProperty] = useState<PropertyRecord | null>(null);
   const [zones, setZones] = useState<BuildingZoneRecord[]>([]);
+  const [annotations, setAnnotations] = useState<any[]>([]);
   const [selectedFloor, setSelectedFloor] = useState<number | "all">("all");
   const [activeLayer, setActiveLayer] = useState<"all" | "moisture" | "acoustic" | "statutory">("all");
   const [selectedZone, setSelectedZone] = useState<BuildingZoneRecord | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [showAnnotationModal, setShowAnnotationModal] = useState(false);
+  const [newDefectType, setNewDefectType] = useState("moisture");
+  const [newFindingNote, setNewFindingNote] = useState("");
+  const [newRiskLevel, setNewRiskLevel] = useState("high");
 
   useEffect(() => {
     async function load() {
       setIsLoading(true);
-      const [pData, zData] = await Promise.all([
+      const [pData, zData, aData] = await Promise.all([
         fetchPropertyById(propertyId),
         fetchBuildingZonesByPropertyId(propertyId),
+        fetchZoneAnnotations(propertyId),
       ]);
       setProperty(pData);
       setZones(zData);
+      setAnnotations(aData || []);
       // Auto-select critical zone if present
       const crit = zData.find((z) => z.risk_level === "critical") || zData[0] || null;
       setSelectedZone(crit);
@@ -51,6 +60,27 @@ export default function PropertyDigitalTwinPage() {
     }
     load();
   }, [propertyId]);
+
+  const handleSaveAnnotation = async () => {
+    if (!newFindingNote.trim()) return;
+    const pinX = selectedZone ? selectedZone.x + selectedZone.width / 2 : 50;
+    const pinY = selectedZone ? selectedZone.y + selectedZone.height / 2 : 50;
+
+    const saved = await addZoneAnnotation(propertyId, {
+      zone_id: selectedZone?.id,
+      defect_type: newDefectType,
+      finding_note: newFindingNote,
+      risk_level: newRiskLevel,
+      x: pinX,
+      y: pinY,
+    });
+
+    if (saved) {
+      setAnnotations((prev) => [saved, ...prev]);
+    }
+    setNewFindingNote("");
+    setShowAnnotationModal(false);
+  };
 
   const filteredZones = zones.filter((z) => {
     if (selectedFloor === "all") return true;
@@ -137,6 +167,12 @@ export default function PropertyDigitalTwinPage() {
         </div>
 
         <div className="flex items-center gap-2">
+          <button
+            onClick={() => setShowAnnotationModal(true)}
+            className="px-3.5 py-2 rounded-xl bg-white border border-[#E6D5DC] text-[#79566F] text-xs font-semibold hover:bg-[#EFE4EC] transition-colors cursor-pointer"
+          >
+            + Add Annotation
+          </button>
           <Link
             href={`/app/properties/${propertyId}/forecasting`}
             className="px-3.5 py-2 rounded-xl bg-white border border-[#E6D5DC] text-[#493344] text-xs font-semibold hover:bg-[#F7EDE5] transition-colors"
@@ -389,6 +425,15 @@ export default function PropertyDigitalTwinPage() {
                   </g>
                 );
               })}
+
+              {/* Pinned Surveyor Defect Annotations */}
+              {annotations.map((ann, idx) => (
+                <g key={ann.id || idx} transform={`translate(${ann.x}, ${ann.y})`}>
+                  <circle r="2.2" fill="#79566F" stroke="#FFFFFF" strokeWidth="0.6" className="drop-shadow-sm cursor-pointer" />
+                  <circle r="0.9" fill="#FFFFFF" />
+                  <title>{`${(ann.defect_type || 'Defect').toUpperCase()}: ${ann.finding_note || ''}`}</title>
+                </g>
+              ))}
             </svg>
           </div>
 
@@ -534,6 +579,87 @@ export default function PropertyDigitalTwinPage() {
           </div>
         </div>
       </div>
+
+      {/* Surveyor Inspection Annotation Modal */}
+      {showAnnotationModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-md bg-white rounded-2xl border border-[#E6D5DC] shadow-xl p-6 space-y-4 animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-[#E6D5DC] pb-3">
+              <h3 className="text-sm font-bold text-[#493344]">Add Floor Plan Inspection Annotation</h3>
+              <button
+                onClick={() => setShowAnnotationModal(false)}
+                className="text-[#806C7B] hover:text-[#493344]"
+              >
+                <XIcon size={18} />
+              </button>
+            </div>
+
+            <div className="space-y-3 text-xs">
+              <div>
+                <label className="font-bold text-[#493344] block mb-1">Target Zone / Room</label>
+                <div className="p-2.5 rounded-xl bg-[#F7EDE5]/50 border border-[#E6D5DC] text-[#493344] font-semibold">
+                  {selectedZone ? `${selectedZone.zone_name} (${selectedZone.zone_code})` : "General Building Envelope"}
+                </div>
+              </div>
+
+              <div>
+                <label className="font-bold text-[#493344] block mb-1">Defect Category</label>
+                <select
+                  value={newDefectType}
+                  onChange={(e) => setNewDefectType(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-[#E6D5DC] bg-white text-[#493344] focus:outline-none focus:border-[#79566F]"
+                >
+                  <option value="moisture">Moisture &amp; Dampness Plume</option>
+                  <option value="pipe_pinhole">Pressurized Supply Pipe Acoustic Leak</option>
+                  <option value="wall_crack">Visible Wall Crack / Substrate Discontinuity</option>
+                  <option value="mould_biofilm">Interstitial Condensation &amp; Mould</option>
+                  <option value="peeling_paint">Coating Delamination / Peeling Paint</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-[#493344] block mb-1">Risk Classification</label>
+                <select
+                  value={newRiskLevel}
+                  onChange={(e) => setNewRiskLevel(e.target.value)}
+                  className="w-full p-2.5 rounded-xl border border-[#E6D5DC] bg-white text-[#493344] focus:outline-none focus:border-[#79566F]"
+                >
+                  <option value="critical">Critical (Awaab's Law 24h statutory window)</option>
+                  <option value="high">High (Priority 7-day remedial survey)</option>
+                  <option value="moderate">Moderate (Standard inspection cycle)</option>
+                  <option value="low">Low (Cosmetic / routine monitoring)</option>
+                </select>
+              </div>
+
+              <div>
+                <label className="font-bold text-[#493344] block mb-1">Surveyor Observation Note</label>
+                <textarea
+                  rows={3}
+                  value={newFindingNote}
+                  onChange={(e) => setNewFindingNote(e.target.value)}
+                  placeholder="Record physical inspection findings, acoustic notes, or protimeter pin depth..."
+                  className="w-full p-2.5 rounded-xl border border-[#E6D5DC] bg-white text-[#493344] focus:outline-none focus:border-[#79566F]"
+                />
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-2 pt-2 border-t border-[#E6D5DC]">
+              <button
+                onClick={() => setShowAnnotationModal(false)}
+                className="px-4 py-2 rounded-xl border border-[#E6D5DC] text-xs font-semibold text-[#806C7B] hover:bg-[#F7EDE5]"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSaveAnnotation}
+                className="px-5 py-2 rounded-xl bg-[#79566F] hover:bg-[#63445A] text-white text-xs font-bold shadow-xs cursor-pointer"
+              >
+                Save Annotation Pin
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

@@ -160,6 +160,13 @@ export default function MoistureAnalysisPage() {
 
         <div className="flex items-center gap-2.5">
           <Link
+            href="/app/analysis/moisture"
+            className="px-3.5 py-2 rounded-xl bg-[#4A8B71] text-white text-xs font-bold hover:bg-[#3B6F5A] shadow-md shadow-[#4A8B71]/20 transition-colors flex items-center gap-1.5"
+          >
+            <SparklesIcon size={14} />
+            <span>Launch YOLO Moisture AI</span>
+          </Link>
+          <Link
             href="/app/inspections"
             className="px-3.5 py-2 rounded-xl bg-white border border-[#E6D5DC] text-[#493344] text-xs font-semibold hover:bg-[#F7EDE5] transition-colors"
           >

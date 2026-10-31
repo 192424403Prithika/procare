@@ -26,12 +26,16 @@ import { fetchWorkOrdersByPropertyId, WorkOrderRecord } from "@/lib/services/wor
 import { deleteProperty } from "@/lib/services/propertyService";
 import { useRouter } from "next/navigation";
 import { useRole } from "@/components/app/RoleContext";
+import { apiClient } from "@/lib/apiClient";
 
 function PropertyDetailContent() {
   const router = useRouter();
   const params = useParams();
   const searchParams = useSearchParams();
   const { role, profile } = useRole();
+
+  const [showQRModal, setShowQRModal] = useState(false);
+  const [qrData, setQrData] = useState<{ qr_code_image: string; scan_url: string; qr_token: string } | null>(null);
 
   const propertyId = (params?.id as string) || "";
 
@@ -296,6 +300,23 @@ function PropertyDetailContent() {
               <span>Conduct Survey</span>
             </Link>
           )}
+
+          <button
+            onClick={async () => {
+              setShowQRModal(true);
+              if (property) {
+                try {
+                  const res = await apiClient.get<any>(`/api/v1/qr/properties/${property.id}`);
+                  setQrData(res);
+                } catch (err) {
+                  console.warn("Failed to fetch property QR code:", err);
+                }
+              }
+            }}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-[#E6D5DC] bg-white text-[#493344] text-xs font-semibold hover:bg-[#F7EDE5] transition-colors cursor-pointer"
+          >
+            <span>QR Tag &amp; Card</span>
+          </button>
 
           <Link
             href={`/app/properties/${property.id}/twin`}
@@ -713,7 +734,7 @@ function PropertyDetailContent() {
               <div>
                 <h3 className="text-lg font-bold text-[#493344]">Edit Property Details</h3>
                 <p className="text-xs text-[#806C7B]">
-                  Update asset specs and persist modifications to Supabase database
+                  Update asset specs and persist modifications to PropCare database
                 </p>
               </div>
               <button
@@ -912,6 +933,64 @@ function PropertyDetailContent() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Property QR Tag & Identifier Modal */}
+      {showQRModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+          <div className="w-full max-w-sm bg-white rounded-2xl border border-[#E6D5DC] shadow-xl p-6 space-y-4 text-center animate-in zoom-in-95 duration-150">
+            <div className="flex items-center justify-between border-b border-[#E6D5DC] pb-3">
+              <h3 className="text-sm font-bold text-[#493344]">Property Physical QR Tag</h3>
+              <button
+                onClick={() => setShowQRModal(false)}
+                className="text-[#806C7B] hover:text-[#493344] text-xs font-bold"
+              >
+                ✕
+              </button>
+            </div>
+
+            {qrData?.qr_code_image ? (
+              <div className="space-y-3">
+                <div className="p-3 bg-[#F7EDE5]/40 rounded-xl border border-[#E6D5DC] inline-block">
+                  <img
+                    src={qrData.qr_code_image}
+                    alt="Property QR"
+                    className="w-48 h-48 mx-auto object-contain"
+                  />
+                </div>
+                <div>
+                  <h4 className="text-xs font-bold text-[#493344]">{property?.property_name}</h4>
+                  <p className="text-[11px] text-[#806C7B]">{property?.address}, {property?.postal_code}</p>
+                </div>
+
+                <div className="p-2.5 rounded-lg bg-[#EFF8F3] text-[10px] text-[#285A44] border border-[#4A8B71]/20">
+                  Cryptographically signed QR token. Scanning opens authorized inspection session without exposing private tenant records.
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <a
+                    href={qrData.qr_code_image}
+                    download={`QR_${property?.property_name?.replace(/\s+/g, "_")}.png`}
+                    className="flex-1 py-2 px-3 bg-[#79566F] hover:bg-[#63445A] text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+                  >
+                    Download QR
+                  </a>
+                  <button
+                    onClick={() => window.print()}
+                    className="flex-1 py-2 px-3 border border-[#E6D5DC] bg-white hover:bg-[#F7EDE5] text-[#493344] text-xs font-bold rounded-xl shadow-xs transition-colors"
+                  >
+                    Print Tag Card
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="py-8 text-xs text-[#806C7B]">
+                <div className="w-6 h-6 border-2 border-[#79566F] border-t-transparent rounded-full animate-spin mx-auto mb-2" />
+                Generating cryptographically signed QR identifier...
+              </div>
+            )}
           </div>
         </div>
       )}

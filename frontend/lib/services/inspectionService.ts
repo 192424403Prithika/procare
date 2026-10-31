@@ -1,6 +1,7 @@
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { fetchProperties } from "@/lib/services/propertyService";
 import { getSignedUrlForPath } from "@/lib/services/storageService";
+import { apiClient } from "@/lib/apiClient";
 
 export interface InspectionImageItem {
   id: string;
@@ -360,6 +361,18 @@ export async function uploadInspectionEvidence(
  * Fetch all inspections with optional role-based filtering
  */
 export async function fetchInspections(userRole?: string, userId?: string): Promise<InspectionReport[]> {
+  // 1. Query FastAPI backend connected to MongoDB Atlas
+  try {
+    const data = await apiClient.get<any>("/api/v1/inspections");
+    const items = Array.isArray(data) ? data : (data?.items || []);
+    if (items && items.length > 0) {
+      saveLocalStore(items);
+      return items;
+    }
+  } catch (apiErr) {
+    // Fall back to Supabase/local store
+  }
+
   const supabase = createClient();
 
   if (isSupabaseConfigured()) {
@@ -653,6 +666,31 @@ export async function fetchInspectionsByPropertyId(propertyId: string): Promise<
 export async function createInspection(
   input: CreateInspectionInput
 ): Promise<InspectionReport> {
+  // 1. Try FastAPI backend first
+  try {
+    const created = await apiClient.post<InspectionReport>("/api/v1/inspections", {
+      property_id: input.property_id,
+      inspector_id: input.inspector_id,
+      inspector_name: input.inspector_name,
+      inspection_zone: input.inspection_zone,
+      room_name: input.room_name,
+      floor: input.floor,
+      inspection_location: input.inspection_location,
+      symptom_tags: input.symptom_tags,
+      notes: input.notes,
+      ambient_img_path: input.ambient_img_path,
+      flash_img_path: input.flash_img_path,
+      audio_path: input.audio_path,
+    });
+    if (created && created.id) {
+      const all = getLocalStore();
+      saveLocalStore([created, ...all]);
+      return created;
+    }
+  } catch (apiErr) {
+    // Fall back to Supabase/local store
+  }
+
   const supabase = createClient();
   const now = new Date().toISOString();
   const newId = `INSP-2026-${Math.floor(1000 + Math.random() * 9000)}`;

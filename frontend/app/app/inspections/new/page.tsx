@@ -595,7 +595,7 @@ export default function NewInspectionWorkflowPage() {
                 Inspection Telemetry Submitted Successfully
               </h2>
               <p className="text-xs text-[#806C7B] mt-1.5">
-                Photographic evidence for <strong className="text-[#493344]">{selectedProperty?.property_name}</strong> has been securely uploaded to Supabase Storage and registered in PostgreSQL.
+                Photographic evidence for <strong className="text-[#493344]">{selectedProperty?.property_name}</strong> has been securely uploaded to PropCare NW Secure Storage and registered in MongoDB.
               </p>
             </div>
 
@@ -627,6 +627,13 @@ export default function NewInspectionWorkflowPage() {
 
             <div className="pt-4 flex flex-col sm:flex-row gap-2.5">
               <Link
+                href={`/app/analysis/moisture?inspection=${createdInspectionId}&property=${selectedPropertyId}`}
+                className="flex-1 py-3 px-4 rounded-xl bg-[#4A8B71] hover:bg-[#3B6F5A] text-white text-xs font-bold transition-colors text-center shadow-md shadow-[#4A8B71]/20 flex items-center justify-center gap-1.5"
+              >
+                <SparklesIcon size={14} />
+                <span>Run YOLO Moisture AI</span>
+              </Link>
+              <Link
                 href={`/app/inspections/${createdInspectionId}`}
                 className="flex-1 py-3 px-4 rounded-xl bg-[#79566F] text-white text-xs font-semibold hover:bg-[#67475E] transition-colors text-center shadow-md shadow-[#79566F]/20"
               >
@@ -650,7 +657,7 @@ export default function NewInspectionWorkflowPage() {
                     Step 1 – Select Authorized Property
                   </h2>
                   <p className="text-xs text-[#806C7B]">
-                    Choose the residential housing unit or estate scheduled for field diagnostic survey from Supabase
+                    Choose the residential housing unit or estate scheduled for field diagnostic survey from the property registry
                   </p>
                 </div>
 

@@ -1,5 +1,6 @@
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
-import { sampleWorkOrders, sampleContractors } from "@/lib/mockData";
+import { sampleWorkOrders, sampleContractors } from "@/lib/mockData";
+import { apiClient } from "@/lib/apiClient";
 
 export interface WorkOrderRecord {
   id: string;
@@ -166,6 +167,16 @@ export async function fetchWorkOrders(filter?: {
   organization?: string;
   status?: string;
 }): Promise<WorkOrderRecord[]> {
+  // 1. Query FastAPI backend connected to MongoDB Atlas
+  try {
+    const data = await apiClient.get<WorkOrderRecord[]>("/api/v1/work-orders");
+    if (data && data.length > 0) {
+      saveLocalStore(data);
+      return data;
+    }
+  } catch (apiErr) {
+    // Fall back to Supabase/local store
+  }
   const supabase = createClient();
 
   if (isSupabaseConfigured()) {

@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
@@ -146,42 +145,7 @@ export async function POST(req: NextRequest) {
     const arrayBuffer = await file.arrayBuffer();
     const buffer = Buffer.from(arrayBuffer);
 
-    // 2. Upload to Supabase Storage if configured
-    if (isSupabaseConfigured()) {
-      try {
-        const supabase = createClient();
-        const { data: uploadData, error: uploadErr } = await supabase.storage
-          .from(bucket)
-          .upload(storagePath, buffer, {
-            contentType: mimeType || (bucket === "acoustic-recordings" ? "audio/wav" : "image/jpeg"),
-            upsert: false,
-            cacheControl: "3600",
-          });
-
-        if (!uploadErr && uploadData?.path) {
-          // Generate secure 24-hour signed URL from private bucket
-          const { data: signedData, error: signedErr } = await supabase.storage
-            .from(bucket)
-            .createSignedUrl(uploadData.path, 86400);
-
-          if (!signedErr && signedData?.signedUrl) {
-            return NextResponse.json({
-              success: true,
-              bucket,
-              storagePath: uploadData.path,
-              signedUrl: signedData.signedUrl,
-              fileName,
-              fileSize: file.size,
-              mimeType,
-            });
-          }
-        }
-      } catch (supabaseErr) {
-        console.warn("Supabase Storage upload threw, falling back to disk storage:", supabaseErr);
-      }
-    }
-
-    // 3. Fallback / Local Storage: Write original binary file to storage disk
+    // 2. Storage Substrate: Write original binary file to storage disk
     // Save under public/uploads/storage/<bucket>/<cleanPropId>/
     const targetDir = path.join(process.cwd(), "public", "uploads", "storage", bucket, cleanPropId);
     if (!fs.existsSync(targetDir)) {

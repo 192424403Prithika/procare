@@ -1,21 +1,36 @@
-import { createBrowserClient } from "@supabase/ssr";
+/**
+ * PropCare NW — Supabase Decoupling Shim (Browser)
+ * Supabase has been removed in favor of Python FastAPI + MongoDB Atlas.
+ */
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || "";
-const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "";
-
-export const isSupabaseConfigured = (): boolean => {
-  return Boolean(
-    supabaseUrl &&
-    supabaseAnonKey &&
-    !supabaseUrl.includes("your-project-id") &&
-    !supabaseAnonKey.includes("your-supabase-anon-key")
-  );
-};
+export const isSupabaseConfigured = (): boolean => false;
 
 export const createClient = () => {
-  // Return browser client with standard cookie/storage persistence
-  return createBrowserClient(
-    supabaseUrl || "https://placeholder-project.supabase.co",
-    supabaseAnonKey || "placeholder-anon-key"
-  );
+  return {
+    from: () => ({
+      select: () => ({
+        eq: () => ({
+          maybeSingle: () => Promise.resolve({ data: null, error: null }),
+          single: () => Promise.resolve({ data: null, error: null }),
+        }),
+        order: () => Promise.resolve({ data: [], error: null }),
+      }),
+      insert: () => Promise.resolve({ data: [], error: null }),
+      update: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }),
+      delete: () => ({ eq: () => Promise.resolve({ data: [], error: null }) }),
+    }),
+    auth: {
+      getUser: () => Promise.resolve({ data: { user: null }, error: null }),
+      signOut: () => Promise.resolve({ error: null }),
+      signInWithPassword: () => Promise.resolve({ data: { user: null }, error: null }),
+      signUp: () => Promise.resolve({ data: { user: null }, error: null }),
+      onAuthStateChange: () => ({ data: { subscription: { unsubscribe: () => {} } } }),
+    },
+    storage: {
+      from: () => ({
+        upload: () => Promise.resolve({ data: null, error: null }),
+        createSignedUrl: () => Promise.resolve({ data: null, error: null }),
+      }),
+    },
+  } as any;
 };

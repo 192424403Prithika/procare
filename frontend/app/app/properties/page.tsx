@@ -103,7 +103,7 @@ export default function PropertiesDashboardPage() {
             Property Management &amp; Housing Stock
           </h1>
           <p className="text-xs text-[#806C7B]">
-            Centralized housing asset registry &bull; Supabase PostgreSQL sync &bull; Risk triage monitoring
+            Centralized housing asset registry &bull; MongoDB Atlas Cloud sync &bull; Risk triage monitoring
           </p>
         </div>
 
@@ -338,8 +338,8 @@ export default function PropertiesDashboardPage() {
       {isLoading ? (
         <div className="bg-white p-12 rounded-3xl border border-[#E6D5DC] text-center shadow-xs">
           <div className="w-6 h-6 border-2 border-[#79566F] border-t-transparent rounded-full animate-spin mx-auto mb-3" />
-          <p className="text-xs font-bold text-[#493344]">Querying Supabase PostgreSQL records...</p>
-          <p className="text-[11px] text-[#806C7B]">Applying Row Level Security &amp; tenant portfolio filters</p>
+          <p className="text-xs font-bold text-[#493344]">Loading housing asset records...</p>
+          <p className="text-[11px] text-[#806C7B]">Applying portfolio filters &amp; predictive telemetry</p>
         </div>
       ) : filtered.length === 0 ? (
         /* Empty State */

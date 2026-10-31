@@ -53,10 +53,10 @@ export default function TechnologySection() {
     },
     {
       category: "Database & Security",
-      tech: "Supabase PostgreSQL",
-      badge: "PostGIS & RLS",
+      tech: "MongoDB Atlas",
+      badge: "Document DB & Argon2",
       description:
-        "Enterprise PostgreSQL with Row-Level Security, geospatial telemetry queries for estate mapping, and cryptographic immutable audit logs.",
+        "High-performance MongoDB Atlas document clusters with Argon2 password encryption, geospatial property queries, and immutable audit logs.",
       icon: <DatabaseIcon size={22} className="text-[#B995AD]" />,
       badgeBg: "bg-[#EFE4EC]",
       role: "Secure telemetry storage & audit logs",

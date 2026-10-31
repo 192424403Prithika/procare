@@ -28,7 +28,7 @@ function UnauthorizedContent() {
               Operational Role Required
             </h1>
             <p className="text-xs text-[#806C7B] mt-1.5 leading-relaxed">
-              Your account has been authenticated with Supabase Auth, but an administrator has not yet assigned an operational role (<strong className="text-[#493344]">Admin, Manager, Inspector, or Contractor</strong>) to your profile.
+              Your account has been authenticated, but an administrator has not yet assigned an operational role (<strong className="text-[#493344]">Admin, Manager, Inspector, or Contractor</strong>) to your profile.
             </p>
           </div>
 
@@ -43,12 +43,12 @@ function UnauthorizedContent() {
             </div>
             <div className="flex justify-between">
               <span className="text-[#806C7B]">Security Enforcement:</span>
-              <span className="font-semibold text-[#4A8B71]">PostgreSQL Row Level Security</span>
+              <span className="font-semibold text-[#4A8B71]">FastAPI Role-Based Access Control</span>
             </div>
           </div>
 
           <p className="text-[11px] text-[#806C7B]">
-            Please contact your PropCare NW System Administrator to grant role access in the Supabase management console.
+            Please contact your PropCare NW System Administrator to grant role access.
           </p>
 
           <div className="pt-2 flex flex-col sm:flex-row gap-3">
@@ -98,7 +98,7 @@ function UnauthorizedContent() {
           </div>
           <div className="flex justify-between">
             <span className="text-[#806C7B]">Enforcement Layer:</span>
-            <span className="font-semibold text-[#4A8B71]">Server Middleware &amp; Supabase RLS</span>
+            <span className="font-semibold text-[#4A8B71]">Server Middleware &amp; JWT RBAC</span>
           </div>
           <div className="flex justify-between">
             <span className="text-[#806C7B]">Permitted Roles:</span>

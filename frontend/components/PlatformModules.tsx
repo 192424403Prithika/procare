@@ -124,7 +124,7 @@ export default function PlatformModules() {
       status: "Next",
       colorBg: "bg-[#E8E9FF]",
       colorBorder: "border-[#B995AD]",
-      description: "Supabase authentication, multi-tenant RBAC (Surveyor, Housing Officer, Contractor, Tenant, Auditor).",
+      description: "FastAPI JWT authentication, multi-tenant MongoDB RBAC (Surveyor, Housing Officer, Contractor, Tenant, Auditor).",
       icon: <ActivityIcon className="h-5 w-5 text-[#B995AD]" />,
     },
   ];

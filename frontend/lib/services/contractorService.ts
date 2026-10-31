@@ -1,6 +1,7 @@
 import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import { getSignedUrlForPath } from "@/lib/services/storageService";
-import { WorkOrderRecord } from "@/lib/services/workOrderService";
+import { WorkOrderRecord } from "@/lib/services/workOrderService";
+import { apiClient } from "@/lib/apiClient";
 
 export type VerificationStatus = "Pending Verification" | "Approved" | "Rejected";
 
@@ -127,6 +128,16 @@ export async function fetchContractors(filter?: {
   search?: string;
 }): Promise<ContractorRecord[]> {
   const supabase = createClient();
+  // 1. Query FastAPI backend connected to MongoDB Atlas
+  try {
+    const data = await apiClient.get<ContractorRecord[]>("/api/v1/contractors");
+    if (data && data.length > 0) {
+      saveLocalStore(data);
+      return data;
+    }
+  } catch (apiErr) {
+    // Fall back to Supabase/local store
+  }
   let list: ContractorRecord[] = [];
 
   if (isSupabaseConfigured()) {

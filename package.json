@@ -1,0 +1,12 @@
+{
+  "name": "propcare-nw-root",
+  "version": "2.0.0",
+  "description": "PropCare NW - Predictive Property Intelligence",
+  "scripts": {
+    "dev": "npm --prefix frontend run dev",
+    "build": "npm --prefix frontend run build",
+    "start": "npm --prefix frontend start",
+    "backend": "python -m uvicorn app.main:app --app-dir backend --host 127.0.0.1 --port 8000 --reload",
+    "test:backend": "python -m pytest backend/tests -v"
+  }
+}

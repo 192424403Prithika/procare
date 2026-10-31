@@ -321,7 +321,7 @@ export default function InspectionDetailPage() {
                     <span>Saved Photographic Evidence ({allSavedPhotos.length} Photo{allSavedPhotos.length > 1 ? "s" : ""})</span>
                   </span>
                   <span className="text-[10px] text-[#4A8B71] bg-[#EFF8F3] px-2 py-0.5 rounded-md font-bold border border-[#4A8B71]/30">
-                    Private Supabase Bucket: inspection-images
+                    Private Storage Bucket: inspection-images
                   </span>
                 </div>
 
@@ -776,7 +776,7 @@ export default function InspectionDetailPage() {
               <strong>Last Updated:</strong> {new Date(inspection.updated_at).toLocaleString("en-GB")}
             </div>
             <div>
-              <strong>Storage Encryption:</strong> AES-256 (Supabase Storage Private)
+              <strong>Storage Encryption:</strong> AES-256 (Secure Object Storage)
             </div>
           </div>
         </div>
@@ -822,7 +822,7 @@ export default function InspectionDetailPage() {
             </div>
             <div className="p-3 bg-[#F7EDE5] border-t border-[#E6D5DC] flex items-center justify-between text-xs">
               <span className="text-[#806C7B]">
-                Supabase Storage: bucket <code>inspection-images</code>
+                Secure Storage: bucket <code>inspection-images</code>
               </span>
               <button
                 type="button"

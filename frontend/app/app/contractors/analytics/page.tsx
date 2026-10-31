@@ -31,6 +31,8 @@ import {
   ContractorPerformanceMetric,
 } from "@/lib/services/workOrderService";
 
+import { apiClient } from "@/lib/apiClient";
+
 export default function ContractorAnalyticsPage() {
   const [metrics, setMetrics] = useState<ContractorPerformanceMetric[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -41,6 +43,18 @@ export default function ContractorAnalyticsPage() {
   useEffect(() => {
     async function load() {
       setIsLoading(true);
+      try {
+        const resp: any = await apiClient.get("/api/v1/contractors/analytics/overview");
+        if (resp && Array.isArray(resp.contractors) && resp.contractors.length > 0) {
+          setMetrics(resp.contractors);
+          setSelectedContractor(resp.contractors[0]);
+          setIsLoading(false);
+          return;
+        }
+      } catch (err) {
+        console.warn("Backend analytics endpoint failed, falling back to local computation:", err);
+      }
+
       const data = await computeContractorAnalytics();
       setMetrics(data);
       if (data.length > 0) setSelectedContractor(data[0]);

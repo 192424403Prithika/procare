@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import crypto from "crypto";
 
-const SIGNING_SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || "propcare_nw_secure_storage_token_key_2026";
+const SIGNING_SECRET = process.env.PROPCARE_STORAGE_SECRET || "propcare_nw_secure_storage_token_key_2026";
 
 export async function GET(req: NextRequest) {
   try {

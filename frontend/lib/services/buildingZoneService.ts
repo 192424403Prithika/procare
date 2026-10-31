@@ -173,9 +173,22 @@ function getLocalStore(): BuildingZoneRecord[] {
   }
 }
 
+import { apiClient } from "@/lib/apiClient";
+
 export async function fetchBuildingZonesByPropertyId(
   propertyId: string
 ): Promise<BuildingZoneRecord[]> {
+  try {
+    const data = await apiClient.get<BuildingZoneRecord[]>(
+      `/api/v1/digital-twin/properties/${propertyId}/zones`
+    );
+    if (Array.isArray(data) && data.length > 0) {
+      return data;
+    }
+  } catch (err) {
+    console.warn("Backend digital twin fetch failed, using local store:", err);
+  }
+
   const all = getLocalStore();
   const matched = all.filter((z) => z.property_id === propertyId);
   if (matched.length > 0) return matched;
@@ -234,5 +247,33 @@ export async function fetchBuildingZonesByPropertyId(
       height: 22,
     },
   ];
+}
+
+export async function addZoneAnnotation(
+  propertyId: string,
+  annotation: {
+    zone_id?: string;
+    defect_type: string;
+    finding_note: string;
+    risk_level: string;
+    x: number;
+    y: number;
+    photo_url?: string;
+  }
+) {
+  try {
+    return await apiClient.post(`/api/v1/digital-twin/properties/${propertyId}/annotate`, annotation);
+  } catch (err) {
+    console.warn("Failed to save annotation to backend:", err);
+    return null;
+  }
+}
+
+export async function fetchZoneAnnotations(propertyId: string) {
+  try {
+    return await apiClient.get<any[]>(`/api/v1/digital-twin/properties/${propertyId}/annotations`);
+  } catch (err) {
+    return [];
+  }
 }
 

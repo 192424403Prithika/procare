@@ -1,4 +1,5 @@
 import { createClient, isSupabaseConfigured } from "../supabase/client";
+import { apiClient } from "@/lib/apiClient";
 
 
 
@@ -367,10 +368,19 @@ export async function fetchProperties(options?: {
 }): Promise<PropertyRecord[]> {
 
   const supabase = createClient();
-
   let results: PropertyRecord[] = [];
 
-
+  // 1. Query FastAPI backend connected to MongoDB Atlas
+  try {
+    const data = await apiClient.get<any>("/api/v1/properties");
+    const items = Array.isArray(data) ? data : (data?.items || []);
+    if (items && items.length > 0) {
+      savePersistentProperties(items);
+      return items;
+    }
+  } catch (apiErr) {
+    // If backend is booting or in offline mode, fall through to Supabase/cache
+  }
 
   if (isSupabaseConfigured()) {
 
@@ -541,13 +551,21 @@ export async function fetchPropertyById(
  */
 
 export async function createProperty(
-
   input: CreatePropertyInput
-
 ): Promise<PropertyRecord> {
+  // 1. Try FastAPI backend first
+  try {
+    const created = await apiClient.post<PropertyRecord>("/api/v1/properties", input);
+    if (created && created.id) {
+      const all = getPersistentProperties();
+      savePersistentProperties([created, ...all]);
+      return created;
+    }
+  } catch (apiErr) {
+    // Fall back to Supabase/local store
+  }
 
   const supabase = createClient();
-
   const generatedId = generatePropertyId();
 
   const now = new Date().toISOString();

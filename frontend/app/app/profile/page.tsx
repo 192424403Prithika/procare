@@ -154,11 +154,11 @@ export default function ProfilePage() {
                   <div className="flex items-center gap-2">
                     <ShieldCheckIcon size={16} className="text-[#4A8B71]" />
                     <span className="text-xs font-bold text-[#493344]">
-                      Role Locked to PostgreSQL Profile ({actualRole.toUpperCase()})
+                      Role Locked to Verified Profile ({actualRole.toUpperCase()})
                     </span>
                   </div>
                   <p className="text-[11px] text-[#806C7B]">
-                    Your role is verified via Supabase Auth and strictly enforced by PostgreSQL Row Level Security. Role modifications can only be performed by a Platform Administrator.
+                    Your role is verified via PropCare NW FastAPI Auth and strictly enforced by Role-Based Access Control. Role modifications can only be performed by a Platform Administrator.
                   </p>
                 </div>
               </div>

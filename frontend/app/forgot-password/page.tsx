@@ -8,12 +8,9 @@ import {
   CheckCircleIcon,
   AlertTriangleIcon,
 } from "@/components/Icons";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
+import { apiClient } from "@/lib/apiClient";
 
 export default function ForgotPasswordPage() {
-  const supabase = createClient();
-  const isConnected = isSupabaseConfigured();
-
   const [email, setEmail] = useState("");
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -30,24 +27,15 @@ export default function ForgotPasswordPage() {
 
     setIsLoading(true);
 
-    if (isConnected) {
-      const redirectUrl = `${window.location.origin}/auth/callback?next=/reset-password`;
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: redirectUrl,
+    try {
+      await apiClient.post("/api/v1/auth/forgot-password", {
+        email: email.trim().toLowerCase(),
       });
-
+      setIsSubmitted(true);
+    } catch (err: any) {
+      setErrorMsg(err?.message || "Failed to submit recovery request.");
+    } finally {
       setIsLoading(false);
-
-      if (error) {
-        setErrorMsg(error.message);
-      } else {
-        setIsSubmitted(true);
-      }
-    } else {
-      setTimeout(() => {
-        setIsLoading(false);
-        setIsSubmitted(true);
-      }, 700);
     }
   };
 
@@ -72,7 +60,7 @@ export default function ForgotPasswordPage() {
           Reset your password
         </h2>
         <p className="mt-1 text-xs text-[#806C7B]">
-          Enter your registered email address and we will issue a secure recovery link.
+          Enter your registered email address and we will issue a secure recovery instruction.
         </p>
       </div>
 
@@ -92,31 +80,16 @@ export default function ForgotPasswordPage() {
               </div>
               <div>
                 <h3 className="text-base font-bold text-[#493344]">
-                  Reset Link Dispatched
+                  Reset Instructions Dispatched
                 </h3>
                 <p className="mt-2 text-xs text-[#806C7B]">
-                  We have dispatched instructions to <span className="font-semibold text-[#493344]">{email}</span>. Click the link in the message to authenticate and establish a new credential.
+                  If an account exists with <span className="font-semibold text-[#493344]">{email}</span>, password reset instructions have been recorded and sent to your registered authority mailbox.
                 </p>
               </div>
-
-              {!isConnected && (
-                <div className="p-3 bg-[#EFE4EC] rounded-2xl border border-[#79566F]/20 text-[11px] text-[#79566F]">
-                  Note: Local demo mode is active. You can proceed directly to establish a new password via the reset interface:
-                  <div className="mt-2">
-                    <Link
-                      href="/reset-password"
-                      className="font-bold underline"
-                    >
-                      Go to Reset Password Screen &rarr;
-                    </Link>
-                  </div>
-                </div>
-              )}
-
-              <div className="pt-4">
+              <div className="pt-4 border-t border-[#E6D5DC]">
                 <Link
                   href="/login"
-                  className="w-full inline-flex justify-center items-center gap-2 py-2.5 px-4 rounded-xl text-sm font-semibold text-white bg-[#79566F] hover:bg-[#67475E] transition-all"
+                  className="w-full inline-flex justify-center items-center py-2.5 px-4 border border-[#E6D5DC] rounded-xl text-xs font-semibold text-[#79566F] hover:bg-[#F7EDE5]"
                 >
                   Return to Sign In
                 </Link>
@@ -126,18 +99,19 @@ export default function ForgotPasswordPage() {
             <form className="space-y-4" onSubmit={handleSubmit}>
               <div>
                 <label htmlFor="email" className="block text-xs font-bold text-[#493344]">
-                  Official Work Email
+                  Official Email Address
                 </label>
                 <div className="mt-1">
                   <input
                     id="email"
                     name="email"
                     type="email"
+                    autoComplete="email"
                     required
-                    placeholder="director@propcare-nw.com"
+                    placeholder="name@organization.gov.uk"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
-                    className="appearance-none block w-full px-3.5 py-2.5 border border-[#E6D5DC] rounded-xl shadow-xs placeholder-[#806C7B]/50 focus:outline-none focus:ring-2 focus:ring-[#79566F] focus:border-[#79566F] text-sm text-[#493344]"
+                    className="appearance-none block w-full px-3.5 py-2.5 border border-[#E6D5DC] rounded-xl shadow-xs text-sm text-[#493344] bg-[#F7EDE5]/50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-[#79566F]"
                   />
                 </div>
               </div>
@@ -146,12 +120,12 @@ export default function ForgotPasswordPage() {
                 <button
                   type="submit"
                   disabled={isLoading}
-                  className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-[#79566F] hover:bg-[#67475E] active:bg-[#4336D0] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#79566F] transition-all cursor-pointer"
+                  className="w-full flex justify-center items-center gap-2 py-3 px-4 border border-transparent rounded-xl shadow-sm text-sm font-semibold text-white bg-[#79566F] hover:bg-[#67475E] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-[#79566F] transition-all cursor-pointer disabled:opacity-60"
                 >
                   {isLoading ? (
                     <span className="flex items-center gap-2">
                       <span className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
-                      <span>Sending Recovery Email...</span>
+                      <span>Processing Request...</span>
                     </span>
                   ) : (
                     <>

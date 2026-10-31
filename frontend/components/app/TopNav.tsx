@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import {
@@ -15,6 +15,7 @@ import {
   CheckCircleIcon,
 } from "@/components/Icons";
 import { useRole, UserRole } from "./RoleContext";
+import { apiClient } from "@/lib/apiClient";
 
 interface TopNavProps {
   onOpenMobileMenu: () => void;
@@ -25,6 +26,21 @@ export default function TopNav({ onOpenMobileMenu }: TopNavProps) {
   const { role, actualRole, isAuthenticated, canSwitchRole, setRole, profile, signOut } = useRole();
   const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const [unreadCount, setUnreadCount] = useState<number>(2);
+
+  useEffect(() => {
+    async function loadUnread() {
+      try {
+        const data = await apiClient.get<any>("/api/v1/notifications/unread-count");
+        if (data && typeof data.unread_count === "number") {
+          setUnreadCount(data.unread_count);
+        }
+      } catch (err) {
+        // fallback gracefully
+      }
+    }
+    loadUnread();
+  }, []);
 
   const handleRoleChange = (newRole: UserRole) => {
     if (canSwitchRole) {
@@ -140,9 +156,11 @@ export default function TopNav({ onOpenMobileMenu }: TopNavProps) {
           title="Notifications"
         >
           <BellIcon size={19} />
-          <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#C84661] text-[9px] font-bold text-white">
-            4
-          </span>
+          {unreadCount > 0 && (
+            <span className="absolute top-1.5 right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-[#C84661] text-[9px] font-bold text-white">
+              {unreadCount}
+            </span>
+          )}
         </Link>
 
         {/* User Profile Dropdown */}

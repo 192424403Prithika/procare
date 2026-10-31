@@ -29,6 +29,7 @@ import {
   MultiDefectResult,
 } from "@/lib/services/multiDefectService";
 import { fetchProperties, PropertyRecord } from "@/lib/services/propertyService";
+import { apiClient } from "@/lib/apiClient";
 
 export default function MultiDefectDetectionPage() {
   const searchParams = useSearchParams();
@@ -40,6 +41,7 @@ export default function MultiDefectDetectionPage() {
   const [selectedInspection, setSelectedInspection] = useState<InspectionReport | null>(null);
   const [selectedProperty, setSelectedProperty] = useState<PropertyRecord | null>(null);
   const [analysisResult, setAnalysisResult] = useState<MultiDefectResult | null>(null);
+  const [decisions, setDecisions] = useState<Record<string, "confirmed" | "rejected">>({});
 
   const [isLoading, setIsLoading] = useState(true);
   const [isProcessing, setIsProcessing] = useState(false);
@@ -124,6 +126,22 @@ export default function MultiDefectDetectionPage() {
     } finally {
       setIsProcessing(false);
       setTimeout(() => setStatusMessage(null), 3000);
+    }
+  };
+
+  const handleDefectDecision = async (defectId: string, category: string, decision: "confirmed" | "rejected") => {
+    try {
+      await apiClient.post("/api/v1/analyze/multi-defect/confirm", {
+        defect_id: defectId,
+        report_id: selectedInspectionId,
+        property_id: selectedInspection?.property_id,
+        category: category,
+        decision: decision,
+      });
+      setDecisions((prev) => ({ ...prev, [defectId]: decision }));
+      setSuccessMessage(`Inspector finding ${decision === "confirmed" ? "confirmed" : "rejected"} successfully.`);
+    } catch (err) {
+      console.warn("Failed to record defect decision:", err);
     }
   };
 
@@ -635,6 +653,41 @@ export default function MultiDefectDetectionPage() {
                   <strong>Evidence Basis: </strong>
                   {c.evidence_basis}
                 </p>
+
+                {/* Inspector Confirmation Action */}
+                <div className="flex items-center justify-between pt-2 border-t border-[#E6D5DC]/60 text-xs">
+                  <span className="text-[11px] text-[#806C7B]">
+                    Recommended Trade: <strong className="text-[#493344]">{c.recommended_trade}</strong>
+                  </span>
+                  <div className="flex items-center gap-2">
+                    {decisions[c.defect_type] ? (
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-bold ${
+                        decisions[c.defect_type] === "confirmed"
+                          ? "bg-[#EFF8F3] text-[#4A8B71] border border-[#4A8B71]/30"
+                          : "bg-[#FDF2F4] text-[#C84661] border border-[#C84661]/30"
+                      }`}>
+                        Inspector: {decisions[c.defect_type].toUpperCase()}
+                      </span>
+                    ) : (
+                      <>
+                        <button
+                          type="button"
+                          onClick={() => handleDefectDecision(c.defect_type, c.defect_type, "rejected")}
+                          className="px-2.5 py-1 rounded-lg border border-[#E6D5DC] hover:bg-[#FDF2F4] hover:text-[#C84661] text-[11px] font-semibold text-[#806C7B] transition-colors cursor-pointer"
+                        >
+                          Reject
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleDefectDecision(c.defect_type, c.defect_type, "confirmed")}
+                          className="px-3 py-1 rounded-lg bg-[#79566F] hover:bg-[#63445A] text-white text-[11px] font-bold shadow-xs transition-colors cursor-pointer"
+                        >
+                          Confirm Defect
+                        </button>
+                      </>
+                    )}
+                  </div>
+                </div>
               </div>
             ))}
           </div>

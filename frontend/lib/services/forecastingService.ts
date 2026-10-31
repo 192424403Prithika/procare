@@ -211,3 +211,49 @@ export async function fetchForecastByPropertyId(propertyId: string): Promise<Pro
   return dynamic;
 }
 
+import { apiClient } from "@/lib/apiClient";
+
+export interface PortfolioForecastItem {
+  property_id: string;
+  property_name: string;
+  uprn: string;
+  postcode: string;
+  estimated_risk_score: number;
+  risk_level: "critical" | "high" | "moderate" | "low";
+  predicted_defect: string;
+  recommended_inspection_date: string;
+  urgency: string;
+  total_inspections: number;
+  active_work_orders: number;
+  last_inspected: string;
+  statutory_note: string;
+}
+
+export interface PortfolioForecastResponse {
+  generated_at: string;
+  total_properties_analyzed: number;
+  disclaimer: string;
+  properties: PortfolioForecastItem[];
+}
+
+export async function fetchPortfolioForecast(
+  defectType?: string,
+  riskLevel?: string
+): Promise<PortfolioForecastResponse> {
+  try {
+    const query = new URLSearchParams();
+    if (defectType && defectType !== "all") query.set("defect_type", defectType);
+    if (riskLevel && riskLevel !== "all") query.set("risk_level", riskLevel);
+    const qs = query.toString() ? `?${query.toString()}` : "";
+    return await apiClient.get<PortfolioForecastResponse>(`/api/v1/forecast/portfolio${qs}`);
+  } catch (err) {
+    console.warn("Portfolio forecast backend fetch failed, returning empty template:", err);
+    return {
+      generated_at: new Date().toISOString(),
+      total_properties_analyzed: 0,
+      disclaimer: "Forecasts distinguish estimated risk from confirmed defects and require physical surveyor verification.",
+      properties: [],
+    };
+  }
+}
+

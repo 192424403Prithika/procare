@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { createClient, isSupabaseConfigured } from "@/lib/supabase/client";
 import crypto from "crypto";
 
-const SIGNING_SECRET = process.env.SUPABASE_SERVICE_ROLE_KEY || "propcare_nw_secure_storage_token_key_2026";
+const SIGNING_SECRET = process.env.PROPCARE_STORAGE_SECRET || "propcare_nw_secure_storage_token_key_2026";
 
 export async function GET(req: NextRequest) {
   try {
@@ -12,21 +11,6 @@ export async function GET(req: NextRequest) {
 
     if (!relativePath) {
       return NextResponse.json({ success: false, error: "Missing storage path" }, { status: 400 });
-    }
-
-    if (isSupabaseConfigured()) {
-      try {
-        const supabase = createClient();
-        const { data, error } = await supabase.storage
-          .from(bucket)
-          .createSignedUrl(relativePath, 86400);
-
-        if (!error && data?.signedUrl) {
-          return NextResponse.json({ success: true, signedUrl: data.signedUrl });
-        }
-      } catch {
-        // Fallback to local
-      }
     }
 
     const expires = Math.floor(Date.now() / 1000) + 86400; // 24 hours
