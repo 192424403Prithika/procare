@@ -52,7 +52,7 @@ class Settings(BaseSettings):
 
     # Frontend URL & CORS
     FRONTEND_URL: str = Field(default="http://localhost:3000")
-    CORS_ORIGINS: List[str] = Field(
+    CORS_ORIGINS: Union[List[str], str] = Field(
         default=[
             "http://localhost:3000",
             "http://127.0.0.1:3000",
@@ -61,17 +61,18 @@ class Settings(BaseSettings):
         ]
     )
 
-    @field_validator("CORS_ORIGINS", mode="before")
+    @field_validator("CORS_ORIGINS", mode="after")
     @classmethod
     def assemble_cors_origins(cls, v: Union[str, List[str]]) -> List[str]:
         if isinstance(v, str):
-            if v.startswith("[") and v.endswith("]"):
+            v_str = v.strip()
+            if v_str.startswith("[") and v_str.endswith("]"):
                 import json
                 try:
-                    return json.loads(v)
+                    return json.loads(v_str)
                 except Exception:
                     pass
-            return [i.strip() for i in v.split(",") if i.strip()]
+            return [i.strip() for i in v_str.split(",") if i.strip()]
         elif isinstance(v, list):
             return v
         return []
