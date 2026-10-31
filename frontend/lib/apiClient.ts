@@ -3,9 +3,22 @@
  * Connects Next.js Frontend to Python FastAPI + MongoDB Atlas Backend.
  */
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL ||
-  (typeof window !== "undefined" ? "" : "http://127.0.0.1:8000");
+function resolveApiBaseUrl(): string {
+  let url = (process.env.NEXT_PUBLIC_API_URL || "").trim().replace(/\/+$/, "");
+  if (!url) {
+    return typeof window !== "undefined" ? "" : "http://127.0.0.1:8000";
+  }
+  if (!url.startsWith("http://") && !url.startsWith("https://")) {
+    if (!url.includes(".") && !url.includes("localhost") && !url.includes("127.0.0.1")) {
+      url = `https://${url}.onrender.com`;
+    } else {
+      url = `https://${url}`;
+    }
+  }
+  return url;
+}
+
+const API_BASE_URL = resolveApiBaseUrl();
 
 export class ApiError extends Error {
   status: number;
