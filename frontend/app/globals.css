@@ -1,0 +1,103 @@
+@import "tailwindcss";
+
+@theme {
+  --color-page-bg: #F7EDE5;
+  --color-sidebar-bg: #E8DADB;
+  --color-card-bg: #FFFFFF;
+  --color-card-secondary: #D8C4D0;
+  --color-primary: #79566F;
+  --color-accent: #B995AD;
+  --color-main-text: #493344;
+  --color-secondary-text: #806C7B;
+  --color-border: #E6D5DC;
+
+  /* Theme Palette Tokens */
+  --color-bg: #F7EDE5;
+  --color-surface: #FFFFFF;
+  --color-primary-dark: #67475E;
+  --color-soft-lavender: #E8DADB;
+  --color-powder-blue: #D8C4D0;
+  --color-mint: #EFF8F3;
+  --color-peach: #FDF5ED;
+  --color-dark-navy: #493344;
+  --color-muted-text: #806C7B;
+  --color-borders: #E6D5DC;
+
+  --color-midnight-navy: #493344;
+  --color-royal-violet: #79566F;
+  --color-electric-purple: #B995AD;
+  --color-aqua: #B995AD;
+  --color-soft-lavender-bg: #F7EDE5;
+  --color-success: #4A8B71;
+  --color-warning: #B86B35;
+  --color-critical: #C84661;
+
+  --font-sans: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+:root {
+  --background: #F7EDE5;
+  --foreground: #493344;
+  --primary: #79566F;
+  --accent: #B995AD;
+  --border: #E6D5DC;
+  --sidebar: #E8DADB;
+  --card: #FFFFFF;
+  --card-secondary: #D8C4D0;
+  --text-main: #493344;
+  --text-secondary: #806C7B;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: #F7EDE5;
+  color: #493344;
+  font-family: var(--font-inter), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  margin: 0;
+  padding: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Design System Utilities */
+.bg-app { background-color: #F7EDE5; }
+.bg-sidebar { background-color: #E8DADB; }
+.bg-white-card { background-color: #FFFFFF; }
+.bg-card-secondary { background-color: #D8C4D0; }
+.bg-soft-lavender { background-color: #E8DADB; }
+.bg-powder-blue { background-color: #D8C4D0; }
+.bg-mint { background-color: #EFF8F3; }
+.bg-peach { background-color: #FDF5ED; }
+
+.text-navy { color: #493344; }
+.text-main { color: #493344; }
+.text-muted { color: #806C7B; }
+.text-secondary { color: #806C7B; }
+.text-lavender { color: #B995AD; }
+.text-primary { color: #79566F; }
+
+.border-subtle { border-color: #E6D5DC; }
+
+.shadow-subtle {
+  box-shadow: 0 1px 3px rgba(73, 51, 68, 0.04), 0 1px 2px rgba(73, 51, 68, 0.02);
+}
+
+.shadow-card {
+  box-shadow: 0 4px 20px -2px rgba(73, 51, 68, 0.06), 0 2px 6px -1px rgba(73, 51, 68, 0.03);
+}
+
+.shadow-card-hover {
+  box-shadow: 0 12px 28px -4px rgba(121, 86, 111, 0.14), 0 4px 10px -2px rgba(73, 51, 68, 0.04);
+}
+
+@keyframes pulseSubtle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.85; transform: scale(1.02); }
+}
+
+.animate-pulse-subtle {
+  animation: pulseSubtle 3s ease-in-out infinite;
+}
